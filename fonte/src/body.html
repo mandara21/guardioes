@@ -1,0 +1,695 @@
+<div id="app-container" data-tab="batalha">
+    <!-- ==================== TOP HEADER BAR ==================== -->
+    <header class="top-header">
+      <button class="hud-avatar" id="btn-avatar" aria-label="Herói" style="--xp:0">
+        <span class="av-ring"><span class="av-face">
+          <svg viewBox="20 10 38 36" width="40" height="38" aria-hidden="true">
+            <rect x="24" y="14" width="30" height="27" rx="8" fill="#fed7aa" stroke="#291d18" stroke-width="2.5"/>
+            <path d="M23 24 C23 12 55 12 55 24 L53 19 L46 21 L39 17 L31 21 L25 19 Z" fill="#5c3a21" stroke="#291d18" stroke-width="2.3"/>
+            <circle cx="34" cy="29" r="2.4" fill="#1f1916"/><circle cx="46" cy="29" r="2.4" fill="#1f1916"/>
+            <path d="M36 35 Q40 38 44 35" fill="none" stroke="#291d18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span></span>
+        <span class="av-lvl" id="av-lvl">1</span>
+        <i class="av-dot" id="av-dot" style="display:none"></i>
+      </button>
+
+      <div class="hud-res">
+        <button class="res-pill" id="btn-gold-plus" title="Moedas de Ouro" aria-label="Ouro: abrir loja">
+          <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="#f4c855" stroke="#8f5b06" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#b87d14" stroke-width="1.6"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="900" fill="#8f5b06">$</text></svg>
+          <b id="hdr-gold">350</b><i class="plus">+</i>
+        </button>
+        <button class="res-pill" id="btn-gems-plus" title="Gemas" aria-label="Gemas: abrir loja">
+          <svg viewBox="0 0 24 24" width="22" height="22"><polygon points="12,2 21,9 12,22 3,9" fill="#38bdf8" stroke="#0369a1" stroke-width="1.8"/><polygon points="12,2 17,9 12,22 7,9" fill="#bae6fd" opacity="0.75"/></svg>
+          <b id="hdr-gems">20</b><i class="plus">+</i>
+        </button>
+      </div>
+
+      <button class="settings-btn" id="btn-open-settings" aria-label="Configurações">
+{{GEAR}}
+      </button>
+    </header>
+
+    <!-- elementos antigos mantidos fora da tela (o jogo ainda atualiza os números deles) -->
+    <div class="legacy-hidden" aria-hidden="true">
+      <div id="btn-header-ranking"><span id="hdr-trophies">1.000</span></div>
+      <span id="hdr-essences">10</span>
+      <span id="hero-level-label">Jef • Nv. 1</span>
+      <div class="xp-bar"><div id="xp-fill"></div></div>
+      <span id="talent-alert-pill" style="display:none;">+1 Talento!</span>
+      <div id="enemy-cards-grid"></div>
+      <span id="stage-hp-text"></span><span id="stage-alive-text"></span>
+      <div id="chest-lvl-pill">Nv. 1</div>
+      <b id="chest-evolve-cost">0</b>
+    </div>
+
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content">
+
+      <!-- ==================== TAB: BATALHA ==================== -->
+      <section id="tab-batalha" class="tab-view active">
+        <div class="battle-stage" id="battle-stage">
+          <svg class="stage-svg" viewBox="0 0 460 640" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+                <stop id="sky-stop-1" offset="0%" stop-color="#629373"/>
+                <stop id="sky-stop-2" offset="100%" stop-color="#93bc91"/>
+              </linearGradient>
+              <linearGradient id="pathG" x1="0" y1="0" x2="0" y2="1">
+                <stop id="path-stop-1" offset="0%" stop-color="#dfd2b4"/>
+                <stop id="path-stop-2" offset="100%" stop-color="#c9b68e"/>
+              </linearGradient>
+            </defs>
+            <rect width="460" height="640" fill="url(#skyG)"/>
+            <g id="sky-deco" transform="translate(0,175)"></g>
+            <g transform="translate(0,330) scale(1.5) translate(0,-112)">
+              <g class="scene-scroll far" id="scene-far"></g>
+              <g class="scene-scroll near" id="scene-near"></g>
+            </g>
+            <rect id="ground-rect" x="0" y="330" width="460" height="310" fill="#9bc082"/>
+            <polygon points="150,330 310,330 460,640 0,640" fill="url(#pathG)"/>
+          </svg>
+
+          <div class="ambient-layer" id="ambient-layer"></div>
+
+          <!-- HUD mínimo -->
+          <div class="hud-power" title="Poder do herói"><span class="pw-ic">⚔️</span><b id="hero-power-val">410</b></div>
+
+          <button class="hud-stage" id="btn-stage-pick" aria-label="Escolher mundo e fase">
+            <span class="hs-title" id="stage-title-label">Mundo 1 • Fase 1</span>
+            <span class="hs-bar"><i id="stage-prog-fill"></i></span>
+          </button>
+
+          <div class="hud-left">
+            <button class="util-btn" id="btn-speed" title="Velocidade da batalha">⚡<br>1x</button>
+            <button class="util-btn" id="btn-auto-skill" title="Usa as habilidades sozinho quando estiverem prontas">🤖<br>OFF</button>
+            <button class="util-btn" id="btn-advance" title="Alterna entre avançar de fase e repetir a fase atual para farmar">▶<br>Fase</button>
+            <button class="util-btn" id="btn-pause" title="Pausar">❚❚</button>
+          </div>
+
+          <div class="combatants-layer">
+            <div class="pet-wrap" id="stage-pet-wrap"></div>
+            <div class="hero-wrap" id="hero-wrap">
+              <div class="shield-aura" id="hero-shield-aura"></div>
+              <div class="mini-hp-bar">
+                <div class="mini-hp-fill" id="hero-mini-hp" style="width:100%;background:#4ade80;"></div>
+              </div>
+{{HERO}}
+            </div>
+            <div class="enemy-slot enemy-slot-0" id="enemy-slot-0"></div>
+            <div class="enemy-slot enemy-slot-1" id="enemy-slot-1"></div>
+            <div class="enemy-slot enemy-slot-2" id="enemy-slot-2"></div>
+            <div id="fx-layer" style="position:absolute;inset:0;pointer-events:none;overflow:visible;"></div>
+          </div>
+
+          <div class="stage-fx" id="stage-fx"></div>
+
+          <!-- 3 habilidades ativas -->
+          <div class="hud-skills">
+            <button class="skill-btn skill-slash" id="btn-skill-slash" aria-label="Golpe Veloz">
+              <i class="cd-mask"></i><span class="cd-num"></span>
+              <span class="sk-ico">⚔️</span><span class="sk-name">Golpe Veloz</span>
+            </button>
+            <button class="skill-btn skill-shield" id="btn-defend" aria-label="Escudo Rúnico">
+              <i class="cd-mask"></i><span class="cd-num"></span>
+              <span class="sk-ico">🛡️</span><span class="sk-name">Escudo Rúnico</span>
+            </button>
+            <button class="skill-btn skill-aether" id="btn-aether" aria-label="Rajada Éter">
+              <i class="cd-mask"></i><span class="cd-num"></span>
+              <span class="sk-ico">✦</span><span class="sk-name">Rajada Éter</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="battle-body">
+          <div class="hint-line" id="hint-line"></div>
+
+          <!-- 12 espaços de equipamento + baú central -->
+          <div class="gear-chest-board">
+            <div class="gear-col">
+              <div class="gear-slot" id="slot-weapon"></div>
+              <div class="gear-slot" id="slot-gloves"></div>
+              <div class="gear-slot" id="slot-cape"></div>
+            </div>
+            <div class="gear-col">
+              <div class="gear-slot" id="slot-armor"></div>
+              <div class="gear-slot" id="slot-ring"></div>
+              <div class="gear-slot" id="slot-belt"></div>
+            </div>
+
+            <div class="chest-hub">
+              <div class="hub-top">
+                <button class="keys-pill" id="keys-pill" title="Chaves (toque para comprar)">
+{{KEY}}
+                  <span id="keys-count-val">6</span>
+                </button>
+                <span class="ess-pill" title="Essências de forja">🔥<span id="panel-essences">10</span></span>
+              </div>
+              <div class="chest-click-zone" id="chest-click-zone">
+{{CHEST}}
+              </div>
+              <button class="chest-evolve-btn" id="btn-evolve-chest"><span id="chest-evo-label">Baú Nv. 1 ▲</span></button>
+              <button class="open-chest-cta" id="btn-open-chest">
+                <span id="open-chest-label">Abrir baú</span>
+              </button>
+              <div class="hub-mini">
+                <button class="bulk-chest-btn" id="btn-bulk-chest" title="Abre vários baús de uma vez: equipa o que for melhor e desmonta o resto">×10</button>
+                <button class="auto-chest-btn" id="btn-auto-chest" title="Abre baús em sequência: equipa o que for melhor, desmonta o resto e para em itens Lendários/Míticos">
+                  <span>Auto</span>
+                  <span id="auto-chest-state">OFF</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="gear-col">
+              <div class="gear-slot" id="slot-helmet"></div>
+              <div class="gear-slot" id="slot-amulet"></div>
+              <div class="gear-slot" id="slot-legs"></div>
+            </div>
+            <div class="gear-col">
+              <div class="gear-slot" id="slot-boots"></div>
+              <div class="gear-slot" id="slot-shield"></div>
+              <div class="gear-slot" id="slot-relic"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: AVENTURA (ARENA + EXPEDIÇÕES) ==================== -->
+      <section id="tab-aventura" class="tab-view section-pad">
+        <div class="eyebrow">COLISEU & EXPEDIÇÕES</div>
+        <h2 class="page-title">Aventuras do Reino</h2>
+        <p class="page-desc">Duele na Arena dos Guardiões ou envie expedições que rendem enquanto você joga (ou dorme).</p>
+
+        <div class="sub-pills">
+          <button class="sub-pill-btn active" data-adv-sub="arena">⚔️ Arena dos Guardiões</button>
+          <button class="sub-pill-btn" data-adv-sub="expeditions">🗺️ Expedições <span class="notif-inline" id="exp-ready-badge" style="display:none;">●</span></button>
+        </div>
+
+        <div id="adv-sub-arena">
+          <div class="panel-card" style="border: 2px solid #d4a338;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+              <div>
+                <div style="font-size:11px;font-weight:800;color:#6e6552;">Sua Liga Atual</div>
+                <div style="font-size:15px;font-weight:900;color:#1f3b2c;" id="arena-league-badge">🥉 Bronze III • 1.000 pts</div>
+              </div>
+              <button class="btn-outline" id="btn-refresh-rivals">🔄 Novos (50 🪙)</button>
+            </div>
+            <div class="row-card" style="margin-bottom:8px;padding:6px 10px;">
+              <strong style="font-size:12.5px;">🎟️ Ingressos: <span id="arena-tickets">5/5</span></strong>
+              <span class="mini-note" id="arena-ticket-timer"></span>
+            </div>
+            <div id="arena-rivals-container" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+
+        <div id="adv-sub-expeditions" style="display:none;">
+          <div id="expeditions-container" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: HERÓI ==================== -->
+      <section id="tab-heroi" class="tab-view section-pad">
+        <div class="eyebrow">EVOLUÇÃO DO GUARDIÃO</div>
+        <h2 class="page-title">Jef, o Guardião</h2>
+        <p class="page-desc">Evolua atributos, distribua talentos, equipe mascotes e dispute o ranking.</p>
+
+        <div class="sub-pills">
+          <button class="sub-pill-btn active" data-hero-sub="stats">⚔️ Atributos</button>
+          <button class="sub-pill-btn" data-hero-sub="pets">🐾 Mascotes</button>
+          <button class="sub-pill-btn" data-hero-sub="ranking">🏆 Ranking</button>
+          <button class="sub-pill-btn" data-hero-sub="rebirth">⭐ Renascer</button>
+        </div>
+
+        <div id="hero-sub-stats">
+          <div class="panel-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <strong style="font-size:14px;">Atributos de Combate</strong>
+              <span id="hero-tab-lvl-badge" style="background:#1f3b2c;color:#f4c855;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;">Nível 1</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:9px;">
+              <div class="stat-box"><span>⚔️ Ataque</span><strong id="stat-atk">32</strong></div>
+              <div class="stat-box"><span>❤️ Vida Máx.</span><strong id="stat-hp">320</strong></div>
+              <div class="stat-box"><span>🛡️ Defesa</span><strong id="stat-def">18</strong></div>
+              <div class="stat-box"><span>💥 Crítico</span><strong id="stat-crit">15%</strong></div>
+              <div class="stat-box"><span>⏱️ Vel. Ataque</span><strong id="stat-aspd">1,00x</strong></div>
+              <div class="stat-box"><span>🩸 Roubo Vida</span><strong id="stat-ls">0%</strong></div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div class="row-card">
+                <div>
+                  <div style="font-size:12.5px;font-weight:800;">Treinar Lâmina (+5% Ataque)</div>
+                  <div class="mini-note">Nível <span id="train-atk-lvl">1</span></div>
+                </div>
+                <button class="btn-green" id="btn-train-atk">🪙 <span id="train-atk-cost">100</span></button>
+              </div>
+              <div class="row-card">
+                <div>
+                  <div style="font-size:12.5px;font-weight:800;">Vigor do Guardião (+5% Vida)</div>
+                  <div class="mini-note">Nível <span id="train-hp-lvl">1</span></div>
+                </div>
+                <button class="btn-green" id="btn-train-hp">🪙 <span id="train-hp-cost">100</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card" style="border: 1.5px solid #d4a338;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px;">
+              <strong style="font-size:14px;">🌳 Árvore de Talentos</strong>
+              <span id="talent-pts-badge" style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:11px;font-weight:900;padding:2px 9px;border-radius:999px;">0 pontos</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;" id="talent-tree-list"></div>
+            <button class="btn-outline" id="btn-respec" style="width:100%;margin-top:8px;">↺ Redistribuir talentos (💎 5)</button>
+          </div>
+        </div>
+
+        <div id="hero-sub-pets" style="display:none;">
+          <div class="panel-card" style="border: 1.5px solid #3b82f6;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px;">
+              <div>
+                <strong style="font-size:14px;">🥚 Chocadeira de Mascotes</strong>
+                <div class="mini-note">Ração Mística: <strong id="pet-food-count">5</strong> 🍖 • o mascote ataca sozinho!</div>
+              </div>
+              <button class="btn-green" id="btn-hatch-egg">Chocar Ovo (💎 12)</button>
+            </div>
+            <div id="pets-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+          </div>
+        </div>
+
+        <div id="hero-sub-rebirth" style="display:none;">
+          <div class="panel-card" style="border: 1.5px solid #d4a338;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+              <div>
+                <strong style="font-size:14px;">⭐ Renascimento</strong>
+                <div class="mini-note">Recomece mais forte: Estrelas dão bônus para sempre.</div>
+              </div>
+              <span class="badge-pill" style="white-space:nowrap;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:13px;font-weight:900;padding:4px 11px;border-radius:999px;"><span id="rb-stars">0</span> ⭐</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:9px;">
+              <div class="stat-box"><span>🏁 Melhor fase</span><strong id="rb-best">—</strong></div>
+              <div class="stat-box"><span>✨ Ao renascer</span><strong id="rb-gain">+0 ⭐</strong></div>
+            </div>
+            <div class="mini-note" id="rb-need" style="margin-bottom:8px;"></div>
+            <button class="btn-green" id="btn-rebirth" style="width:100%;padding:11px;font-size:14px;">🔒 Renascer</button>
+            <div class="mini-note" style="margin-top:8px;"><b>Reinicia:</b> mundo/fase, nível, treino, talentos, equipamentos, forja, baú, ouro e chaves.<br><b>Mantém:</b> ⭐ e melhorias, gemas, mascotes, troféus, missões, mundos já liberados e expedições.</div>
+          </div>
+          <div class="panel-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;">
+              <strong style="font-size:14px;">🌟 Melhorias Permanentes</strong>
+            </div>
+            <div class="mini-note" id="rb-bonus" style="margin-bottom:8px;"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;" id="rb-upgrades"></div>
+          </div>
+        </div>
+
+        <div id="hero-sub-ranking" style="display:none;">
+          <div class="panel-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+              <strong style="font-family:var(--font-display);font-size:16px;">🏆 Ranking de Jogadores</strong>
+              <button class="btn-outline" id="btn-rank-refresh" style="padding:5px 10px;">↻</button>
+            </div>
+            <div class="sub-pills" style="margin-bottom:8px;">
+              <button class="sub-pill-btn active" data-rank-kind="stages">Fases</button>
+              <button class="sub-pill-btn" data-rank-kind="trophies">Arena</button>
+              <button class="sub-pill-btn" data-rank-kind="stars">Estrelas</button>
+            </div>
+            <div class="mini-note" id="rank-note" style="margin-bottom:8px;"></div>
+            <div id="leaderboard-container" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: LOJA ==================== -->
+      <section id="tab-loja" class="tab-view section-pad">
+        <div class="eyebrow">MERCADO DA FLORESTA</div>
+        <h2 class="page-title">Um tesouro à sua espera</h2>
+        <p class="page-desc">Adquira chaves, ovos e recursos com o ouro e as gemas da sua jornada.</p>
+
+        <div class="sub-pills">
+          <button class="sub-pill-btn active" data-shop-sub="items">🛒 Itens</button>
+          <button class="sub-pill-btn" data-shop-sub="premium">💠 Premium</button>
+        </div>
+        <div id="shop-sub-items">
+        <div class="panel-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <strong style="font-size:14.5px;">Presente Diário Grátis</strong>
+            <span style="background:#e2f1e8;color:#2d6a4f;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;" id="daily-streak-badge">DIA 1/7</span>
+          </div>
+          <p style="font-size:12px;color:#6e6552;margin:0 0 6px 0;" id="daily-gift-desc">300 moedas + 3 chaves + 5 gemas + 5 Ração de Pet</p>
+          <div class="prog-bar gold" style="margin-bottom:9px;"><div id="daily-streak-bar" style="width:0%"></div></div>
+          <button class="btn-green" id="btn-daily-gift" style="width:100%;">Resgatar Presente Diário</button>
+        </div>
+
+        <div class="panel-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <strong style="font-size:13.5px;">🔑 Bolsa de Chaves (3x)</strong>
+            <div class="mini-note">3 chaves para abrir novos equipamentos.</div>
+          </div>
+          <button class="btn-green" id="btn-buy-keys">🪙 <span id="price-keys">200</span></button>
+        </div>
+
+        <div class="panel-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <strong style="font-size:13.5px;">🗝️ Baú de Chaves Místico (10x)</strong>
+            <div class="mini-note">10 chaves especiais do mestre ferreiro.</div>
+          </div>
+          <button class="btn-green" id="btn-buy-mystic-keys">💎 15</button>
+        </div>
+
+        <div class="panel-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <strong style="font-size:13.5px;">🔥 Pacote de Forja (25 Essências + 10 🍖)</strong>
+            <div class="mini-note">Aprimore equipamentos e alimente seus mascotes.</div>
+          </div>
+          <button class="btn-green" id="btn-buy-forge-pack">🪙 <span id="price-forge">350</span></button>
+        </div>
+
+        <div class="panel-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <strong style="font-size:13.5px;">🎟️ Pacote de Ingressos (3x)</strong>
+            <div class="mini-note">3 ingressos extras para a Arena.</div>
+          </div>
+          <button class="btn-green" id="btn-buy-tickets">💎 5</button>
+        </div>
+
+        <div class="panel-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <strong style="font-size:13.5px;">💰 Reserva do Mercador</strong>
+            <div class="mini-note" id="gold-pack-desc">1.200 moedas para evoluir o baú e atributos.</div>
+          </div>
+          <button class="btn-green" id="btn-buy-gold">💎 10</button>
+        </div>
+        </div>
+        <div id="shop-sub-premium" style="display:none;">
+          <div class="panel-card" id="premium-account"></div>
+          <div class="panel-card">
+            <strong style="font-family:var(--font-display);font-size:16px;">💠 Cristais</strong>
+            <div class="mini-note" style="margin:2px 0 10px;">Moeda premium. Compre cosméticos e vantagens de conforto. <b>Não compram baús, chaves nem itens aleatórios.</b></div>
+            <div class="pack-grid" id="pack-grid"></div>
+          </div>
+          <div class="panel-card">
+            <strong style="font-family:var(--font-display);font-size:16px;">✨ Aparências do Herói</strong>
+            <div class="mini-note" style="margin:2px 0 8px;">Só visual. Não muda atributos.</div>
+            <div style="display:flex;flex-direction:column;gap:7px;" id="skin-list"></div>
+          </div>
+          <div class="panel-card" id="vip-card"></div>
+          <div class="panel-card" id="bundle-card"></div>
+          <p class="mini-note" style="padding:0 4px;">Pagamentos processados pelo Mercado Pago (Pix, cartão e outros). Você tem 7 dias para desistir de compras digitais ainda não utilizadas (CDC art. 49) — fale com o suporte. Cristais não têm valor em dinheiro e não podem ser transferidos.</p>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: MISSÕES ==================== -->
+      <section id="tab-missoes" class="tab-view section-pad">
+        <div class="eyebrow">QUADRO DO GUARDIÃO</div>
+        <h2 class="page-title">Grandes feitos</h2>
+        <p class="page-desc">Missões diárias renovam todo dia. Conquistas rendem cada vez mais a cada nível.</p>
+        <div class="sub-pills">
+          <button class="sub-pill-btn active" data-quest-sub="daily">📅 Diárias <span class="notif-inline" id="daily-ready-badge" style="display:none;">●</span></button>
+          <button class="sub-pill-btn" data-quest-sub="ach">🏅 Conquistas <span class="notif-inline" id="ach-ready-badge" style="display:none;">●</span></button>
+        </div>
+        <div id="quests-daily" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div id="quests-ach" style="display:none;flex-direction:column;gap:8px;"></div>
+      </section>
+    </main>
+
+    <!-- ==================== BOTTOM NAVIGATION ==================== -->
+    <nav class="bottom-nav">
+      <button class="nav-item" data-tab="loja">
+        <svg class="nav-ic" viewBox="0 0 24 24"><path d="M4 9.5 5.6 4h12.8L20 9.5"/><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5.5 12v8h13v-8"/><path d="M10 20v-5h4v5"/></svg><span>Loja</span>
+      </button>
+      <button class="nav-item" data-tab="heroi">
+        <span class="notif-dot" id="hero-notif-dot" style="display:none;"></span>
+        <svg class="nav-ic" viewBox="0 0 24 24"><path d="M12 2.8 4.8 5.6v5.7c0 4.7 3 8 7.2 9.7 4.2-1.7 7.2-5 7.2-9.7V5.6L12 2.8z"/><path d="m12 8 1.3 2.6 2.9.4-2.1 2 .5 2.9L12 14.5l-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg><span>Herói</span>
+      </button>
+      <button class="nav-item active" data-tab="batalha">
+        <svg class="nav-ic" viewBox="0 0 24 24"><path d="M4.5 4.5 15 15M19.5 4.5 9 15"/><path d="m13.2 16.6 3 3M10.8 16.6l-3 3"/><path d="m15.8 12.8 3.2 3.2M8.2 12.8 5 16"/><path d="m4 4 3.2.4L8 7.6M20 4l-3.2.4L16 7.6" /></svg><span>Batalha</span>
+      </button>
+      <button class="nav-item" data-tab="aventura">
+        <span class="notif-dot" id="adv-notif-dot" style="display:none;"></span>
+        <svg class="nav-ic" viewBox="0 0 24 24"><path d="M3.5 6.5 9 4l6 2.5 5.5-2.5v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span>Aventura</span>
+      </button>
+      <button class="nav-item" data-tab="missoes">
+        <span class="notif-dot" id="quest-notif-dot" style="display:none;"></span>
+        <svg class="nav-ic" viewBox="0 0 24 24"><path d="M8.5 4h9.5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7.5"/><path d="M8.5 4a2 2 0 0 0-2 2v10.5a3.5 3.5 0 0 1-3 3.5h4.2a3 3 0 0 0 3-3V6a2 2 0 0 0-2-2z" /><path d="M12.5 9h5M12.5 13h5"/></svg><span>Missões</span>
+      </button>
+    </nav>
+
+  <!-- ==================== MODAL: ESCOLHER MUNDO/FASE ==================== -->
+  <div class="modal-backdrop" id="stage-modal">
+    <div class="modal-card" style="text-align:center;">
+      <h3 style="margin:0 0 2px;">Mundo e Fase</h3>
+      <div class="world-nav-row" style="margin:6px 0 2px;">
+        <button class="world-switch-btn" id="btn-prev-world" title="Mundo anterior" aria-label="Mundo anterior">◀</button>
+        <div class="zone-label zone-modal" id="zone-name-label">FLORESTA DOS SUSSURROS</div>
+        <button class="world-switch-btn" id="btn-next-world" title="Próximo mundo" aria-label="Próximo mundo">▶</button>
+      </div>
+      <div class="mini-note" id="stage-sub-label" style="margin-bottom:8px;"></div>
+      <div class="wave-track" id="wave-track"></div>
+      <div class="mini-note" style="margin-top:8px;">Fases já vencidas podem ser repetidas para farmar. Toque numa fase para ir até ela.</div>
+      <button class="btn-green" id="btn-close-stage" style="width:100%;padding:11px;margin-top:10px;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: EVOLUIR BAÚ ==================== -->
+  <div class="modal-backdrop" id="chest-modal">
+    <div class="modal-card" style="text-align:left;">
+      <h3 style="margin:0 0 2px;text-align:center;" id="cm-title">Baú Nível 1</h3>
+      <div class="mini-note" style="text-align:center;margin-bottom:8px;" id="cm-sub">Evoluir melhora as chances de equipamentos raros.</div>
+      <div id="cm-reqs" class="cm-reqs"></div>
+      <div class="cm-odds-title">Chance por raridade</div>
+      <div id="cm-odds" class="cm-odds"></div>
+      <button class="btn-green" id="btn-do-evolve" style="width:100%;padding:12px;margin-top:10px;">▲ Evoluir Baú</button>
+      <button class="btn-outline" id="btn-close-chest" style="width:100%;padding:10px;margin-top:6px;">Fechar</button>
+    </div>
+  </div>
+
+
+    <!-- ==================== MODAL: LOOT ==================== -->
+    <div class="modal-backdrop" id="loot-modal">
+      <div class="modal-card" style="position:relative;padding:20px;text-align:center;">
+        <div class="rays-spinner"></div>
+        <div style="position:relative;z-index:2;">
+          <span id="loot-rarity-badge" style="display:inline-block;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;border:1px solid #999;margin-bottom:6px;">COMUM</span>
+          <h3 id="loot-title" style="font-family:Georgia,serif;font-size:19px;font-weight:900;margin:0 0 2px 0;">Espada do Bosque</h3>
+          <div id="loot-subtitle" style="font-size:12px;color:#6e6552;font-weight:700;margin-bottom:4px;">Espada • Nível 2</div>
+          <div id="loot-trait" class="trait-line" style="display:none;"></div>
+
+          <div id="loot-icon-preview" style="width:84px;height:84px;margin:0 auto 10px auto;border-radius:18px;border:2px solid #999;display:flex;align-items:center;justify-content:center;"></div>
+
+          <div id="loot-verdict" style="font-size:12px;font-weight:900;margin-bottom:8px;"></div>
+
+          <div style="background:#f6f2e2;border:1px solid #dcd4bc;border-radius:14px;padding:10px 12px;font-size:12.5px;text-align:left;margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span>Poder:</span><span id="loot-cmp-power" style="font-weight:800;">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span>Ataque:</span><span id="loot-cmp-atk" style="font-weight:800;">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span>Vida:</span><span id="loot-cmp-hp" style="font-weight:800;">0</span>
+            </div>
+          </div>
+          <div id="loot-current" class="mini-note" style="margin-bottom:12px;"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn-outline" id="btn-sell-loot">Desmontar<br>(+<span id="loot-sell-val">40</span> 🪙 +<span id="loot-sell-ess">2</span> 🔥)</button>
+            <button class="btn-green" id="btn-equip-loot">Equipar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: DUELO NA ARENA ==================== -->
+    <div class="modal-backdrop" id="duel-modal">
+      <div class="modal-card">
+        <div style="background:#1f3b2c;color:#f6f2e2;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:10px;font-weight:800;letter-spacing:1.4px;color:#f4c855;">DUELO NA ARENA</div>
+            <div id="duel-title" style="font-family:Georgia,serif;font-size:14px;font-weight:800;">Jef vs. Rival</div>
+          </div>
+          <span id="duel-turn-badge" style="background:#15291e;color:#f4c855;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;">Turno 1</span>
+        </div>
+
+        <div style="position:relative;height:175px;background:linear-gradient(180deg,#3d342c 0%,#6c5b48 55%,#b8a07a 100%);overflow:hidden;border-bottom:2px solid #cbbda0;">
+          <div style="position:relative;z-index:5;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:rgba(31,59,44,0.92);border:1px solid #d4a338;border-radius:10px;padding:6px 8px;color:#fff;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;">
+                <span>Jef (Você)</span><span id="duel-p1-pwr" style="color:#f4c855;">⚡ 410</span>
+              </div>
+              <div style="width:100%;height:6px;background:#13241b;border-radius:999px;margin:4px 0;overflow:hidden;">
+                <div id="duel-p1-bar" style="height:100%;width:100%;background:#4ade80;transition:width 0.15s;"></div>
+              </div>
+              <div id="duel-p1-hp" style="font-size:11px;font-weight:700;text-align:right;">320 / 320</div>
+            </div>
+            <div style="background:rgba(63,29,29,0.92);border:1px solid #f87171;border-radius:10px;padding:6px 8px;color:#fff;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;">
+                <span id="duel-p2-name">Rival</span><span id="duel-p2-pwr" style="color:#fca5a5;">⚡ 390</span>
+              </div>
+              <div style="width:100%;height:6px;background:#241010;border-radius:999px;margin:4px 0;overflow:hidden;">
+                <div id="duel-p2-bar" style="height:100%;width:100%;background:#ef4444;transition:width 0.15s;"></div>
+              </div>
+              <div id="duel-p2-hp" style="font-size:11px;font-weight:700;text-align:right;">300 / 300</div>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:0;right:0;bottom:10px;height:85px;pointer-events:none;">
+            <div id="duel-p1-sprite" style="position:absolute;left:18%;bottom:2px;transition:transform 0.15s;"></div>
+            <div id="duel-p2-sprite" style="position:absolute;right:18%;bottom:2px;transition:transform 0.15s;"></div>
+            <div id="duel-fx-layer" style="position:absolute;inset:0;"></div>
+          </div>
+        </div>
+
+        <div style="padding:12px 14px;">
+          <div id="duel-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <button class="btn-outline" id="btn-duel-power">💥 Golpe Forte</button>
+            <button class="btn-outline" id="btn-duel-guard">🛡️ Guardar</button>
+          </div>
+          <div id="duel-log" style="background:#f6f2e2;border:1px solid #dcd4bc;border-radius:10px;padding:8px;height:74px;overflow-y:auto;font-size:11.5px;font-weight:600;margin-bottom:10px;"></div>
+          <div id="duel-result-box" style="display:none;padding:10px;border-radius:12px;text-align:center;margin-bottom:10px;border:2px solid;"></div>
+          <button class="btn-green" id="btn-close-duel" style="display:none;width:100%;padding:11px;">Concluir Duelo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: FORJA ==================== -->
+    <div class="modal-backdrop" id="inspect-modal">
+      <div class="modal-card" style="max-width:330px;padding:18px;text-align:center;">
+        <span id="insp-rarity" style="display:inline-block;font-size:10.5px;font-weight:900;padding:2px 9px;border-radius:999px;border:1px solid #999;margin-bottom:5px;">COMUM</span>
+        <h3 id="insp-name" style="font-family:Georgia,serif;font-size:17px;font-weight:900;margin:0 0 2px 0;">Equipamento</h3>
+        <div id="insp-sub" style="font-size:12px;color:#6e6552;margin-bottom:4px;">Nível 1 • Forja +0</div>
+        <div id="insp-trait" class="trait-line" style="display:none;"></div>
+        <div id="insp-icon" style="width:74px;height:74px;margin:0 auto 10px auto;border-radius:16px;border:2px solid #999;display:flex;align-items:center;justify-content:center;"></div>
+        <div id="insp-stats" style="background:#f6f2e2;border-radius:11px;padding:10px;font-size:12.5px;text-align:left;margin-bottom:11px;"></div>
+        <button class="btn-green" id="btn-forge-slot" style="width:100%;margin-bottom:7px;background:linear-gradient(180deg,#d97706,#b45309);">
+          🔥 Forjar Slot (<span id="forge-cost-label">80 🪙 + 2 🔥</span>)
+        </button>
+        <button class="btn-outline" id="btn-close-inspect" style="width:100%;">Fechar</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: BEM-VINDO DE VOLTA ==================== -->
+    <div class="modal-backdrop" id="offline-modal">
+      <div class="modal-card" style="max-width:330px;padding:20px;text-align:center;">
+        <div style="font-size:38px;line-height:1;margin-bottom:4px;">🌙</div>
+        <h3 style="font-family:Georgia,serif;font-size:19px;font-weight:900;margin:0 0 2px 0;">Bem-vindo de volta!</h3>
+        <div id="offline-sub" class="mini-note" style="margin-bottom:10px;">Jef guardou a trilha enquanto você esteve fora.</div>
+        <div id="offline-body" style="background:#f6f2e2;border:1px solid #dcd4bc;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:700;text-align:left;margin-bottom:12px;display:flex;flex-direction:column;gap:5px;"></div>
+        <button class="btn-green" id="btn-close-offline" style="width:100%;padding:11px;">Coletar recompensas</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: SALVAR / CARREGAR ==================== -->
+    <div class="modal-backdrop" id="saveio-modal">
+      <div class="modal-card" style="max-width:340px;padding:18px;text-align:center;">
+        <h3 style="font-family:Georgia,serif;font-size:18px;font-weight:900;margin:0 0 6px 0;">Código do Save</h3>
+        <p class="mini-note" style="margin:0 0 8px 0;" id="saveio-help">Copie este código para guardar seu progresso. Para carregar, cole um código aqui e toque em Importar.</p>
+        <textarea class="io-box" id="saveio-text" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px;">
+          <button class="btn-outline" id="btn-saveio-copy">📋 Copiar</button>
+          <button class="btn-green" id="btn-saveio-import">⬇ Importar</button>
+        </div>
+        <button class="btn-outline" id="btn-saveio-close" style="width:100%;">Fechar</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: CONFIGURAÇÕES ==================== -->
+    <div class="modal-backdrop" id="settings-modal">
+      <div class="modal-card" style="max-width:320px;padding:18px;text-align:center;">
+        <h3 style="font-family:Georgia,serif;font-size:18px;font-weight:900;margin:0 0 12px 0;">Configurações</h3>
+        <div class="acct-line" id="settings-account"></div>
+        <button class="btn-outline" id="btn-account" style="width:100%;margin-bottom:8px;">👤 Conta</button>
+        <button class="btn-outline" id="btn-toggle-sfx" style="width:100%;margin-bottom:8px;display:flex;justify-content:space-between;">
+          <span>Efeitos Sonoros</span>
+          <strong id="sfx-status-label" style="color:#2d6a4f;">ATIVADO</strong>
+        </button>
+        <button class="btn-outline" id="btn-toggle-vib" style="width:100%;margin-bottom:8px;display:flex;justify-content:space-between;">
+          <span>Vibração</span>
+          <strong id="vib-status-label" style="color:#2d6a4f;">ATIVADA</strong>
+        </button>
+        <button class="btn-outline" id="btn-export-save" style="width:100%;margin-bottom:8px;">💾 Exportar / Importar save</button>
+        <button id="btn-reset-save" style="width:100%;margin-bottom:10px;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:11px;padding:9px;font-size:12.5px;font-weight:800;cursor:pointer;">
+          Resetar Save
+        </button>
+        <button class="btn-green" id="btn-close-settings" style="width:100%;">Voltar ao Jogo</button>
+      </div>
+    </div>
+
+    <!-- ==================== TELA INICIAL ==================== -->
+    <div id="splash">
+      <div class="splash-inner">
+        <div class="splash-glow"></div>
+        <div class="splash-chest" id="splash-chest"></div>
+        <h1 class="splash-title"><small>GUARDIÕES</small>DO BAÚ</h1>
+        <p class="splash-sub">Abra baús. Forje lendas. Suba no ranking.</p>
+        <button class="open-chest-cta splash-btn" id="splash-play">▶ JOGAR</button>
+        <div class="splash-acct" id="splash-acct"></div>
+        <button class="splash-link" id="splash-login" style="display:none;">Entrar / criar conta</button>
+        <div class="splash-foot">Toque em JOGAR para ativar o som</div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: LOGIN ==================== -->
+    <div class="modal-backdrop" id="login-modal">
+      <div class="modal-card" style="max-width:340px;padding:20px;text-align:center;">
+        <h3 style="margin:0 0 4px;">Entrar no jogo</h3>
+        <p class="mini-note" style="margin:0 0 10px;">Salve seu progresso na nuvem, entre no ranking e use a loja. Sem senha.</p>
+        <button class="btn-outline" id="btn-google" style="width:100%;margin-bottom:8px;padding:10px;">Continuar com Google</button>
+        <div class="mini-note" style="margin:4px 0 8px;">ou receba um código por e-mail</div>
+        <div id="login-step-email">
+          <input class="field" id="login-email" type="email" inputmode="email" autocomplete="email" placeholder="seu@email.com">
+          <button class="btn-green" id="btn-send-code" style="width:100%;margin-top:8px;padding:11px;">Enviar código</button>
+        </div>
+        <div id="login-step-code" style="display:none;">
+          <div class="mini-note" id="login-code-hint" style="margin-bottom:6px;"></div>
+          <input class="field" id="login-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Código do e-mail" style="text-align:center;letter-spacing:4px;font-size:20px;">
+          <button class="btn-green" id="btn-verify-code" style="width:100%;margin-top:8px;padding:11px;">Entrar</button>
+        </div>
+        <p class="form-err" id="login-err"></p>
+        <label class="check-row"><input type="checkbox" id="login-terms"><span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>
+        <button class="btn-outline" id="btn-login-close" style="width:100%;">Agora não</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: NOME DO JOGADOR ==================== -->
+    <div class="modal-backdrop" id="name-modal">
+      <div class="modal-card" style="max-width:340px;padding:20px;text-align:center;">
+        <h3 style="margin:0 0 4px;">Escolha seu nome</h3>
+        <p class="mini-note" style="margin:0 0 10px;">É assim que os outros jogadores vão ver você no ranking. 3 a 16 letras, números, espaço, _ . -<br><b>Não dá para trocar depois.</b></p>
+        <input class="field" id="name-input" maxlength="16" autocomplete="nickname" placeholder="Seu nome de guardião" style="text-align:center;">
+        <p class="form-err" id="name-err"></p>
+        <button class="btn-green" id="btn-name-ok" style="width:100%;padding:11px;">Confirmar nome</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: SAVE NA NUVEM ==================== -->
+    <div class="modal-backdrop" id="sync-modal">
+      <div class="modal-card" style="max-width:350px;padding:18px;text-align:center;">
+        <h3 style="margin:0 0 4px;">Qual progresso usar?</h3>
+        <p class="mini-note" style="margin:0 0 10px;">Encontramos um save na sua conta e outro neste aparelho.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div class="stat-box" style="flex-direction:column;gap:3px;text-align:left;"><b>☁️ Nuvem</b><span id="sync-cloud" style="font-size:11.5px;"></span></div>
+          <div class="stat-box" style="flex-direction:column;gap:3px;text-align:left;"><b>📱 Este aparelho</b><span id="sync-local" style="font-size:11.5px;"></span></div>
+        </div>
+        <button class="btn-green" id="btn-sync-cloud" style="width:100%;margin-bottom:7px;padding:10px;">Usar o da nuvem</button>
+        <button class="btn-outline" id="btn-sync-local" style="width:100%;padding:10px;">Usar o deste aparelho (substitui a nuvem)</button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: COMPRA ==================== -->
+    <div class="modal-backdrop" id="buy-modal">
+      <div class="modal-card" style="max-width:340px;padding:20px;text-align:center;">
+        <h3 style="margin:0 0 6px;">Confirmar compra</h3>
+        <div style="font-size:36px;line-height:1;">💠</div>
+        <div style="font-family:var(--font-display);font-weight:800;font-size:22px;margin:4px 0 0;" id="buy-title">60 Cristais</div>
+        <div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:#2d6a4f;margin-bottom:8px;" id="buy-price">R$ 4,90</div>
+        <label class="check-row"><input type="checkbox" id="buy-adult"><span>Tenho <b>18 anos ou mais</b> (ou autorização do meu responsável legal) e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos</a>.</span></label>
+        <p class="mini-note" style="margin:0 0 8px;">Você será levado ao Mercado Pago para pagar com Pix ou cartão. Os Cristais chegam em segundos.</p>
+        <p class="form-err" id="buy-err"></p>
+        <button class="btn-green" id="btn-buy-go" style="width:100%;padding:12px;font-size:15px;">Ir para o pagamento</button>
+        <button class="btn-outline" id="btn-buy-cancel" style="width:100%;margin-top:7px;">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="toast-stack"></div>
+  </div>

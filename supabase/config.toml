@@ -1,0 +1,7 @@
+# O Mercado Pago não envia login do Supabase, então esta função precisa ser pública.
+# (a segurança dela vem da consulta ao Mercado Pago + assinatura, ver mp-webhook/index.ts)
+[functions.mp-webhook]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false   # o próprio código valida o token do jogador

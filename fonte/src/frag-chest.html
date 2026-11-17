@@ -1,0 +1,38 @@
+                <svg id="chest-svg" viewBox="0 0 120 110" width="86" height="82" style="overflow:visible;filter:drop-shadow(0 5px 5px rgba(40,30,12,0.28));">
+                  <defs>
+                    <linearGradient id="wBase" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#8b5a2b"/>
+                      <stop offset="100%" stop-color="#5c3818"/>
+                    </linearGradient>
+                    <linearGradient id="wLid" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#a66c36"/>
+                      <stop offset="100%" stop-color="#6e441e"/>
+                    </linearGradient>
+                    <linearGradient id="gTrim" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#fde047"/>
+                      <stop offset="50%" stop-color="#eab308"/>
+                      <stop offset="100%" stop-color="#b45309"/>
+                    </linearGradient>
+                  </defs>
+                  <ellipse cx="60" cy="99" rx="44" ry="7" fill="rgba(45, 34, 16, 0.25)"/>
+                  <!-- Chest Base -->
+                  <g>
+                    <rect x="18" y="54" width="84" height="42" rx="6" fill="url(#wBase)" stroke="#3b230d" stroke-width="3"/>
+                    <line x1="21" y1="68" x2="99" y2="68" stroke="#472b11" stroke-width="2"/>
+                    <line x1="21" y1="82" x2="99" y2="82" stroke="#472b11" stroke-width="2"/>
+                    <rect x="18" y="54" width="11" height="42" rx="3" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.5"/>
+                    <rect x="91" y="54" width="11" height="42" rx="3" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.5"/>
+                    <rect x="18" y="88" width="84" height="8" rx="3" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.2"/>
+                  </g>
+                  <!-- Articulated Chest Lid -->
+                  <g class="chest-lid">
+                    <path d="M16 54 L16 34 C16 20 32 14 60 14 C88 14 104 20 104 34 L104 54 Z" fill="url(#wLid)" stroke="#3b230d" stroke-width="3"/>
+                    <path d="M16 54 L16 34 C16 26 21 21 28 18 L28 54 Z" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.5"/>
+                    <path d="M104 54 L104 34 C104 26 99 21 92 18 L92 54 Z" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.5"/>
+                    <rect x="53" y="14" width="14" height="40" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.3"/>
+                    <rect x="15" y="48" width="90" height="8" rx="3" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.5"/>
+                    <rect x="49" y="42" width="22" height="22" rx="5" fill="url(#gTrim)" stroke="#3b230d" stroke-width="2.6"/>
+                    <circle cx="60" cy="51" r="3.2" fill="#3b230d"/>
+                    <path d="M58.5 52 L61.5 52 L62.5 58 L57.5 58 Z" fill="#3b230d"/>
+                  </g>
+                </svg>
