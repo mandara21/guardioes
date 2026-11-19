@@ -1468,6 +1468,8 @@
     }
     .hud-left .util-btn.on { background: linear-gradient(180deg, #7bd88a, #2f9e44); border-color: #1b5e24; color: #fff; }
     .hud-left .util-btn.warn { background: linear-gradient(180deg, #ffd27a, #f59e0b); border-color: #92400e; color: #5a2d05; }
+    .hud-left .util-btn { position: relative; }
+    .hud-left .util-btn.vip-lock::after { content: '👑'; position: absolute; top: -6px; right: -5px; font-size: 13px; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.5)); }
 
     .combatants-layer { left: 0; right: 0; bottom: 98px; height: 210px; z-index: 10; }
     .combatants-layer .hero-wrap { left: 12%; bottom: 50px; }
@@ -2217,17 +2219,6 @@
       </div>
     </div>
 
-    <!-- ==================== MODAL: BEM-VINDO DE VOLTA ==================== -->
-    <div class="modal-backdrop" id="offline-modal">
-      <div class="modal-card" style="max-width:330px;padding:20px;text-align:center;">
-        <div style="font-size:38px;line-height:1;margin-bottom:4px;">🌙</div>
-        <h3 style="font-family:Georgia,serif;font-size:19px;font-weight:900;margin:0 0 2px 0;">Bem-vindo de volta!</h3>
-        <div id="offline-sub" class="mini-note" style="margin-bottom:10px;">Jef guardou a trilha enquanto você esteve fora.</div>
-        <div id="offline-body" style="background:#f6f2e2;border:1px solid #dcd4bc;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:700;text-align:left;margin-bottom:12px;display:flex;flex-direction:column;gap:5px;"></div>
-        <button class="btn-green" id="btn-close-offline" style="width:100%;padding:11px;">Coletar recompensas</button>
-      </div>
-    </div>
-
     <!-- ==================== MODAL: SALVAR / CARREGAR ==================== -->
     <div class="modal-backdrop" id="saveio-modal">
       <div class="modal-card" style="max-width:340px;padding:18px;text-align:center;">
@@ -2584,6 +2575,28 @@
         const GEAR_SCALE = 0.7;
         const variantOf = (slot, id) => ((GEAR_DEFS[slot] || {}).variants || []).find((v) => v.id === id) || null;
 
+        /* Equipamentos criados no painel admin: vêm do servidor e ficam guardados no aparelho (funcionam offline).
+           Cada um vira mais uma "variação" do espaço, com chance de queda (w) e raridade mínima (minR). */
+        const CUSTOM_KEY = 'guardioes_custom_v1';
+        let CUSTOM_ITEMS = [];
+        function applyCustomItems(list) {
+          Object.keys(GEAR_DEFS).forEach((s) => { GEAR_DEFS[s].variants = GEAR_DEFS[s].variants.filter((v) => !v.custom); });
+          CUSTOM_ITEMS = [];
+          (Array.isArray(list) ? list : []).slice(0, 200).forEach((c) => {
+            if (!c || typeof c.id !== 'string' || !/^c_[a-z0-9_]{2,28}$/.test(c.id) || !GEAR_DEFS[c.slot]) return;
+            const v = {
+              id: c.id, slot: c.slot, custom: true, off: c.active === false,
+              name: String(c.name || '').replace(/[<>&"]/g, '').slice(0, 24) || 'Peça Especial',
+              a: clamp(Number(c.a) || 1, 0.3, 1.6), h: clamp(Number(c.h) || 1, 0.3, 1.6), w: clamp(Number(c.w) || 1, 0.05, 5),
+              minR: RARITY_ORDER.indexOf(c.minR) >= 0 ? c.minR : 'common',
+              art: ['sword', 'axe', 'spear', 'staff'].indexOf(c.art) >= 0 ? c.art : ''
+            };
+            if (TRAITS[c.trait]) v.t = [c.trait, clamp(Number(c.tb) || 0, 0, 10)];
+            GEAR_DEFS[c.slot].variants.push(v); CUSTOM_ITEMS.push(v);
+          });
+        }
+        try { applyCustomItems(JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]')); } catch (e) {}
+
         /* ---- Baú: evolução muito difícil ---- */
         const MAX_CHEST = 20;
         const CHEST_BONUS = 3.4;                       // pontos de sorte por nível do baú
@@ -2661,7 +2674,8 @@
             legs:   S('<path d="M13 8 L35 8 L38 41 L27 41 L24 23 L21 41 L10 41 Z" fill="#475569" stroke="' + K + '" stroke-width="2.2"/><rect x="13" y="8" width="22" height="7" fill="' + accent + '" stroke="' + K + '" stroke-width="1.8"/>'),
             relic:  S('<rect x="10" y="7" width="28" height="34" rx="3.5" fill="#5b21b6" stroke="' + K + '" stroke-width="2.2"/><rect x="10" y="7" width="7" height="34" rx="3" fill="#4c1d95" stroke="' + K + '" stroke-width="2"/><polygon points="28,17 34,24 28,31 22,24" fill="' + accent + '" stroke="' + K + '" stroke-width="1.8"/><circle cx="28" cy="24" r="2" fill="#fff" opacity=".8"/>')
           };
-          if (type === 'weapon' && icons[variant]) return icons[variant];
+          const vd = variantOf(type, variant), art = (vd && vd.art) || variant;
+          if (type === 'weapon' && icons[art]) return icons[art];
           return icons[type] || icons.weapon;
         }
 
@@ -3679,6 +3693,7 @@
           pa.classList.toggle('warn', combat.paused);
           setHTML(sp, '⚡<br>' + combat.speed + 'x');
           sp.classList.toggle('on', combat.speed > 1);
+          sp.classList.toggle('vip-lock', !isVip());
           setHTML(au, '🤖<br>' + (state.autoSkills ? 'ON' : 'OFF'));
           au.classList.toggle('on', state.autoSkills);
           setHTML(ad, state.autoAdvance ? '▶<br>Fase' : '↻<br>Farm');
@@ -3762,19 +3777,23 @@
         }
         const isHighRarity = (it) => it.rarity === 'legendary' || it.rarity === 'mythic';
 
-        function rollRandomEquipment() {
-          const type = pick(Object.keys(GEAR_LABELS));
-          const def = GEAR_DEFS[type];
-          const variant = pick(def.variants);
-          const rarity = rollRarity(state.chestLevel);
+        /* Escolhe a peça do espaço, respeitando a raridade mínima e a chance de queda das peças do painel admin */
+        function pickVariant(def, rarity) {
+          const rank = RARITY_ORDER.indexOf(rarity);
+          let list = def.variants.filter((v) => !v.off && rank >= RARITY_ORDER.indexOf(v.minR || 'common'));
+          if (!list.length) list = def.variants.filter((v) => !v.custom);
+          let total = 0; list.forEach((v) => { total += (v.w || 1); });
+          let r = Math.random() * total;
+          for (let i = 0; i < list.length; i++) { r -= (list[i].w || 1); if (r <= 0) return list[i]; }
+          return list[list.length - 1];
+        }
 
-          // Baús evoluídos também dão itens de nível mais alto
-          const lvl = Math.max(1, state.heroLevel + Math.floor(Math.random() * 3) - 1 + Math.floor((state.chestLevel - 1) / 2));
+        function buildItem(type, variant, rarity, lvl) {
+          const def = GEAR_DEFS[type];
           const mult = RARITIES[rarity].mult;
           const jitter = rnd(0.92, 1.08);
           const suffix = { common: 'Simples', uncommon: 'do Bosque', rare: 'do Guardião', epic: 'Arcano', legendary: 'Celestial', mythic: 'do Éter Supremo' }[rarity];
           const hasTrait = !!variant.t && rarity !== 'common';
-
           return {
             type: type,
             v: variant.id,
@@ -3787,6 +3806,25 @@
             tv: hasTrait ? Math.max(1, Math.round(variant.t[1] * mult)) : 0,
             sellGold: 25 + lvl * 14 + Math.round(mult * 18)
           };
+        }
+
+        function rollRandomEquipment() {
+          const type = pick(Object.keys(GEAR_LABELS));
+          const rarity = rollRarity(state.chestLevel);
+          const variant = pickVariant(GEAR_DEFS[type], rarity);
+          // Baús evoluídos também dão itens de nível mais alto
+          const lvl = Math.max(1, state.heroLevel + Math.floor(Math.random() * 3) - 1 + Math.floor((state.chestLevel - 1) / 2));
+          return buildItem(type, variant, rarity, lvl);
+        }
+
+        /* Equipamento enviado de presente pelo painel admin: abre a janela para você escolher equipar ou desmontar */
+        function giftGear(g) {
+          const v = g && CUSTOM_ITEMS.find((c) => c.id === g.id);
+          if (!v || !RARITIES[g.rarity]) return false;
+          const lvl = Math.max(1, state.heroLevel + Math.floor((state.chestLevel - 1) / 2));
+          const item = buildItem(v.slot, v, g.rarity, lvl);
+          setTimeout(() => { rolledItem = item; showLootModal(item); refreshHUD(); }, 900);
+          return true;
         }
 
         function equipItem(item) {
@@ -4647,44 +4685,6 @@
           showToast('🎁 Dia ' + g.day + ': +' + fmt(g.gold) + '🪙 +' + g.keys + '🔑 +' + g.gems + '💎 +' + g.food + '🍖');
           return true;
         }
-
-        function computeOffline(elapsedSec) {
-          const cap = 8 * 3600;
-          const sec = Math.min(elapsedSec, cap);
-          const idx = curIdx();
-          const st = getHeroStats();
-          const waves = Math.floor(sec / 30);
-          const eff = 0.8;
-          return {
-            elapsed: elapsedSec, capped: elapsedSec > cap, waves: waves,
-            gold: Math.round(waves * stageGold(idx) * 1.84 * st.goldMult * eff),
-            xp: Math.round(waves * 3 * xpPerKill(idx) * st.xpMult * eff),
-            keys: Math.floor(waves * st.extraKeyChance * eff),
-            ess: Math.floor(waves * 0.1)
-          };
-        }
-
-        function applyOffline(info) {
-          state.gold += info.gold; state.keys += info.keys; state.essences += info.ess;
-          addHeroXp(info.xp);
-          state.stats.battlesWon += info.waves;
-          const body = $('offline-body');
-          body.innerHTML =
-            '<div>⏱️ Tempo fora: <strong>' + fmtTime(info.elapsed) + '</strong>' + (info.capped ? ' <span class="mini-note">(máx. 8h)</span>' : '') + '</div>' +
-            '<div>⚔️ Ondas vencidas: <strong>' + fmt(info.waves) + '</strong></div>' +
-            '<div>🪙 Moedas: <strong>+' + fmt(info.gold) + '</strong></div>' +
-            '<div>✨ Experiência: <strong>+' + fmt(info.xp) + '</strong></div>' +
-            '<div>🔑 Chaves: <strong>+' + fmt(info.keys) + '</strong> &nbsp; 🔥 Essências: <strong>+' + fmt(info.ess) + '</strong></div>' +
-            (anyExpeditionReady() ? '<div style="color:#b45309;">🗺️ Há expedições prontas para coletar!</div>' : '');
-          $('offline-modal').classList.add('open');
-          SFX.chestOpen();
-        }
-
-        function checkOffline() {
-          const away = (Date.now() - state.lastSeen) / 1000;
-          if (away >= 60) { applyOffline(computeOffline(away)); saveGame(); return true; }
-          return false;
-        }
         /* =====================================================================
            16. ONLINE: conta, save na nuvem, ranking de jogadores reais, loja premium
            Fala direto com o Supabase (Auth + RPC + Edge Functions) usando fetch.
@@ -4696,7 +4696,7 @@
         const SESSION_KEY = 'guardioes_session_v1';
         const online = {
           on: !!(SB_URL && SB_KEY), session: null, me: null, lb: {}, lbAt: {}, lbKind: 'stages', myRank: {},
-          rivals: [], rivalsAt: 0, lastPush: 0, pending: null, busy: false
+          rivals: [], rivalsAt: 0, lastPush: 0, pending: null, busy: false, shop: null
         };
 
         const PACKS = [
@@ -4737,7 +4737,9 @@
 
         async function rawFetch(path, opt) {
           opt = opt || {};
-          const headers = { apikey: SB_KEY, 'Content-Type': 'application/json', Authorization: 'Bearer ' + (opt.token || SB_KEY) };
+          const headers = { apikey: SB_KEY, 'Content-Type': 'application/json' };
+          const bearer = opt.token || (SB_KEY.indexOf('sb_') === 0 ? '' : SB_KEY);   // chave "sb_publishable_" não é JWT
+          if (bearer) headers.Authorization = 'Bearer ' + bearer;
           try {
             const res = await fetch(SB_URL + path, { method: opt.method || 'POST', headers, body: opt.body === undefined ? undefined : JSON.stringify(opt.body), keepalive: !!opt.keepalive });
             let data = null; try { data = await res.json(); } catch (e) {}
@@ -4806,26 +4808,45 @@
           online.me = r.data;
           applySkin(); syncHeroVitals();
           if (online.me.deliveries && online.me.deliveries.length) applyDeliveries(online.me.deliveries);
-          renderAccount(); renderPremium();
+          renderAccount(); renderPremium(); loadShop();
           return online.me;
         }
         function applyDeliveries(list) {
           const done = state.deliveredIds || (state.deliveredIds = []);
-          const ids = []; let text = [];
+          const ids = []; let text = [], gift = false, msg = '';
           list.forEach((d) => {
             if (!done.includes(d.id)) {
               const p = d.payload || {};
-              if (p.essences) { state.essences += clamp(Math.floor(num(p.essences, 0)), 0, 5000); text.push(p.essences + ' 🔥'); }
+              if (p.gear && !giftGear(p.gear)) return;          // peça ainda não carregada: tenta de novo na próxima vez
+              if (p.gear) text.push('equipamento especial');
+              if (p.gold) { state.gold += clamp(Math.floor(num(p.gold, 0)), 0, 1e12); text.push(fmt(p.gold) + ' 🪙'); }
+              if (p.essences) { state.essences += clamp(Math.floor(num(p.essences, 0)), 0, 50000); text.push(p.essences + ' 🔥'); }
+              if (p.keys) { state.keys += clamp(Math.floor(num(p.keys, 0)), 0, 1000); text.push(p.keys + ' 🔑'); }
+              if (p.gems) { state.gems += clamp(Math.floor(num(p.gems, 0)), 0, 100000); text.push(p.gems + ' 💎'); }
               if (p.tickets) { state.arenaTickets += clamp(Math.floor(num(p.tickets, 0)), 0, 50); text.push(p.tickets + ' 🎟️'); }
               if (p.petFood) { state.petFood += clamp(Math.floor(num(p.petFood, 0)), 0, 5000); text.push(p.petFood + ' 🍖'); }
               if (p.goldHours) { state.gold += Math.round(stageGold(Math.max(curIdx(), state.runBest)) * 90 * clamp(num(p.goldHours, 0), 0, 48)); text.push('ouro'); }
+              if (String(d.item || '').indexOf('gift_') === 0) gift = true;
+              if (p.msg) msg = String(p.msg).replace(/[<>&"]/g, '').slice(0, 60);
               done.push(d.id); if (done.length > 60) done.shift();
             }
             ids.push(d.id);
           });
           saveGame(); afterAction();
-          if (text.length) showToast('🎁 Pacote recebido: ' + text.join(' • '));
-          rpc('ack_deliveries', { p_ids: ids });
+          if (text.length) showToast((gift ? '🎁 Presente recebido: ' : '🎁 Pacote recebido: ') + text.join(' • ') + (msg ? ' — ' + msg : ''));
+          if (ids.length) rpc('ack_deliveries', { p_ids: ids });
+        }
+
+        /* ---- equipamentos novos e pacotes da loja (cadastrados no painel admin) ---- */
+        async function loadCustomItems() {
+          const r = await rpc('get_custom_items', {}, { anon: true });
+          if (!r.ok || !Array.isArray(r.data)) return;
+          try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(r.data)); } catch (e) {}
+          applyCustomItems(r.data);
+        }
+        async function loadShop() {
+          const r = await rpc('get_shop', {}, { anon: !online.session });
+          if (r.ok && Array.isArray(r.data)) { online.shop = r.data; renderPremium(); }
         }
 
         /* ---- progresso e nuvem ---- */
@@ -5040,10 +5061,22 @@
               '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-display);font-weight:800;font-size:14px;">' + sk.name + '</div><div class="mini-note">Aparência exclusiva</div></div>' + btn + '</div>';
           }).join('') + (equipped ? '<button class="btn-outline" data-act="equip" data-id="" style="width:100%;">Voltar à aparência padrão</button>' : ''));
 
-          let vipLine = 'Ouro e experiência +25% por 30 dias. Compras empilham.';
+          let vipLine = 'Ouro e experiência +25% e velocidade de batalha ×2/×3 por 30 dias. Compras empilham.';
           if (isVip()) { const e = me.entitlements.find((x) => x.item === 'vip_30'); vipLine = '✅ Ativo até ' + new Date(e.expires_at).toLocaleDateString('pt-BR') + '. Comprar de novo soma +30 dias.'; }
           setHTML('vip-card', '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-family:var(--font-display);font-size:15px;">👑 Passe VIP — 30 dias</strong><div class="mini-note">' + vipLine + '</div></div><button class="btn-green" data-act="spend" data-id="vip_30" style="min-width:86px;">' + VIP_PRICE + ' 💠</button></div>');
-          setHTML('bundle-card', '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-family:var(--font-display);font-size:15px;">🎒 Pacote do Guardião <span class="mini-note">(1 por conta)</span></strong><div class="mini-note">150 🔥 Essências • 5 🎟️ Ingressos • 40 🍖 Ração • 2h de ouro</div></div><button class="btn-green" data-act="spend" data-id="bundle_guardiao" style="min-width:86px;">' + BUNDLE_PRICE + ' 💠</button></div>');
+          if (Array.isArray(online.shop)) {
+            const line = (p) => [p.essences ? p.essences + ' 🔥 Essências' : '', p.tickets ? p.tickets + ' 🎟️ Ingressos' : '', p.petFood ? p.petFood + ' 🍖 Ração' : '', p.goldHours ? p.goldHours + 'h de ouro' : ''].filter(Boolean).join(' • ');
+            setHTML('bundle-card', online.shop.map((it, i) => {
+              const btn = it.owned
+                ? '<button class="btn-green muted" disabled style="min-width:86px;">Comprado ✓</button>'
+                : '<button class="btn-green" data-act="spend" data-id="' + esc(it.id) + '" style="min-width:86px;">' + fmt(it.price) + ' 💠</button>';
+              return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;' + (i ? 'border-top:1px dashed var(--border-cream);margin-top:9px;padding-top:9px;' : '') + '"><div style="min-width:0;"><strong style="font-family:var(--font-display);font-size:15px;">' + esc(it.icon || '🎁') + ' ' + esc(it.name) + (it.one_time ? ' <span class="mini-note">(1 por conta)</span>' : '') + '</strong>' +
+                (it.descr ? '<div class="mini-note">' + esc(it.descr) + '</div>' : '') + '<div class="mini-note">' + esc(line(it.payload || {})) + '</div></div>' + btn + '</div>';
+            }).join(''));
+            toggleShow('bundle-card', online.shop.length > 0);
+          } else {
+            setHTML('bundle-card', '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-family:var(--font-display);font-size:15px;">🎒 Pacote do Guardião <span class="mini-note">(1 por conta)</span></strong><div class="mini-note">150 🔥 Essências • 5 🎟️ Ingressos • 40 🍖 Ração • 2h de ouro</div></div><button class="btn-green" data-act="spend" data-id="bundle_guardiao" style="min-width:86px;">' + BUNDLE_PRICE + ' 💠</button></div>');
+          }
         }
         async function spendItem(id) {
           if (!online.session) { openLogin(); return; }
@@ -5099,8 +5132,9 @@
           if (!online.on) return;
           online.session = loadSession();
           await consumeAuthHash();
+          await loadCustomItems();                       // antes de ler o save da nuvem
           renderAccount();
-          if (online.session) { await afterLogin(); await checkPaymentReturn(); }
+          if (online.session) { await afterLogin(); await checkPaymentReturn(); } else loadShop();
           renderAccount();
         }
 
@@ -5448,7 +5482,20 @@
 
         /* Controles de batalha */
         $('btn-pause').addEventListener('click', () => { combat.paused = !combat.paused; renderControlLabels(); });
+        /* Velocidade ×2 e ×3: exclusiva do Passe VIP */
+        function enforceSpeed() {
+          if (state.speed <= 1 && combat.speed <= 1) return;
+          if (isVip()) return;
+          if (online.on && online.session && !online.me) return;   // ainda carregando a conta
+          state.speed = 1; combat.speed = 1;
+          renderControlLabels();
+        }
         $('btn-speed').addEventListener('click', () => {
+          if (!isVip()) {
+            SFX.error();
+            showToast(online.on ? '👑 Velocidade ×2 e ×3 é exclusiva do Passe VIP (veja na Loja).' : '👑 Velocidade ×2 e ×3 é exclusiva do Passe VIP.');
+            return;
+          }
           combat.speed = combat.speed >= 3 ? 1 : combat.speed + 1;
           state.speed = combat.speed;
           renderControlLabels(); saveGame();
@@ -5648,7 +5695,6 @@
           }
         });
         $('btn-saveio-close').addEventListener('click', () => { $('saveio-modal').classList.remove('open'); });
-        $('btn-close-offline').addEventListener('click', () => { $('offline-modal').classList.remove('open'); afterAction(); });
 
         let rbTimer = null;
         $('btn-rebirth').addEventListener('click', function () {
@@ -5690,7 +5736,7 @@
            21. INICIALIZAÇÃO E LAÇO PRINCIPAL
            ===================================================================== */
         bootGame();
-        checkOffline();
+        enforceSpeed();
         refreshHUD();
 
         let lastT = performance.now(), hudAcc = 0, secAcc = 0, saveAcc = 0;
@@ -5698,6 +5744,7 @@
         function secondly() {
           ensureDaily();
           regenTickets();
+          enforceSpeed(); renderControlLabels();
           updateHint();
           updateExpeditionTimers(); onlineTick();
           if (ui.tab === 'aventura') updateArenaTimer();
@@ -5721,7 +5768,7 @@
         document.addEventListener('visibilitychange', () => {
           if (document.hidden) { saveGame(); pushProgress(false, true); return; }
           lastT = performance.now();
-          if (checkOffline()) afterAction();
+          state.lastSeen = Date.now();
         });
         window.addEventListener('pagehide', saveGame);
 
@@ -5732,9 +5779,10 @@
           get state() { return state; },
           combat: combat, tick: tick, fmt: fmt, stats: getHeroStats,
           bulk: openChestsBulk, buy: buy, forge: forgeSlot, talent: doTalent, train: doTrain, evolve: doEvolveChest,
-          claim: claimQuest, daily: claimDailyGift, offline: computeOffline, applyOffline: applyOffline,
+          claim: claimQuest, daily: claimDailyGift,
           expSend: sendExpedition, expCollect: collectExpedition, expeditions: EXPEDITIONS,
           online: online, rankings: loadLeaderboard, openBuy: openBuy, isVip: isVip,
+          applyCustomItems: applyCustomItems, customItems: () => CUSTOM_ITEMS, pickVariant: pickVariant, buildItem: buildItem, giftGear: giftGear, applyDeliveries: applyDeliveries, loadShop: loadShop, loadCustomItems: loadCustomItems,
           roll: rollRandomEquipment, equip: equipItem, chestReq: chestReq, chestOdds: chestOdds, chestMissing: chestMissing, MAX_CHEST: MAX_CHEST, GEAR_DEFS: GEAR_DEFS, TRAITS: TRAITS, itemPower: itemPower, svg: getGearSVG,
           rebirth: doRebirth, rebirthGain: rebirthGain, starUp: doStarUp, jumpTo: jumpTo, exportSave: exportSaveCode, importSave: importSaveCode, spawn: spawnWave,
           tabs: switchTab, refresh: afterAction, ach: ACHIEVEMENTS, dailyDefs: DAILY_DEFS, dailyReady: dailyReady, achReady: achReady,

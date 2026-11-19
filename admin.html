@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel Admin — Guardiões do Baú</title>
+<style>
+  :root {
+    --bg: #13221a; --panel: #1b2f24; --panel2: #223a2d; --line: #335544; --text: #f1ecd8; --muted: #a9b8a8;
+    --gold: #f4c855; --green: #2d6a4f; --green2: #3a8a66; --red: #b4413a; --cream: #f6f2e2; --ink: #28251e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 14px 16px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  h1 { margin: 0; font: 700 20px Georgia, serif; color: var(--gold); }
+  h2 { margin: 0 0 4px; font: 700 17px Georgia, serif; color: var(--gold); }
+  .who { color: var(--muted); font-size: 13px; text-align: right; }
+  .hidden { display: none !important; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .note { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+  .warn { background: #3a2f18; border: 1px solid #6b5522; color: #f4dfa4; border-radius: 10px; padding: 9px 11px; font-size: 13px; margin: 8px 0; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tab { flex: 1 1 auto; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 10px 12px; border-radius: 10px; font: 600 14px inherit; cursor: pointer; }
+  .tab.on { background: var(--green); border-color: var(--green2); color: #fff; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 3px; }
+  input[type=text], input[type=number], select, textarea { width: 100%; background: var(--cream); color: var(--ink); border: 1px solid #cfc6a8; border-radius: 8px; padding: 9px 10px; font: 15px inherit; }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--green); vertical-align: middle; margin-right: 6px; }
+  .check { display: flex; align-items: center; color: var(--text); font-size: 14px; margin: 10px 0 2px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 12px; }
+  .btn { background: var(--green); color: #fff; border: 1px solid var(--green2); border-radius: 10px; padding: 10px 16px; font: 700 14px inherit; cursor: pointer; }
+  .btn:hover { background: var(--green2); }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn.small { padding: 6px 10px; font-size: 13px; }
+  .btn.red { background: var(--red); border-color: #d5605a; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .row .main { min-width: 0; }
+  .row .t { font-weight: 700; }
+  .row .s { color: var(--muted); font-size: 13px; }
+  .row .acts { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #2f6b4a; color: #d8f5e4; margin-left: 6px; vertical-align: 1px; }
+  .chip.off { background: #5a3a38; color: #f3cfcb; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .log { font: 12px/1.4 ui-monospace, Consolas, monospace; color: var(--muted); word-break: break-all; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #0e1a13; border: 1px solid var(--gold); color: var(--text); padding: 10px 16px; border-radius: 10px; max-width: 92vw; z-index: 9; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  #toast.err { border-color: #d5605a; color: #ffd9d6; }
+  a { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🛠️ Painel Admin</h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <!-- ===== PORTÃO (login / sem permissão) ===== -->
+  <section id="gate" class="card">
+    <h2 id="gate-title">Verificando…</h2>
+    <p class="note" id="gate-text"></p>
+    <div class="actions" id="gate-actions"></div>
+  </section>
+
+  <!-- ===== PAINEL ===== -->
+  <section id="app" class="hidden">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="shop">🛒 Loja</button>
+      <button class="tab" data-tab="gift">🎁 Presentear</button>
+      <button class="tab" data-tab="gear">⚔️ Equipamentos</button>
+      <button class="tab" data-tab="log">📜 Histórico</button>
+    </div>
+
+    <!-- LOJA -->
+    <div id="tab-shop">
+      <div class="card">
+        <h2>Pacotes à venda por 💠 Cristais</h2>
+        <p class="note">Aparecem na loja do jogo na hora, sem mexer no código.</p>
+        <div id="shop-list"></div>
+      </div>
+      <div class="card">
+        <h2 id="shop-form-title">Novo pacote</h2>
+        <div class="warn">Por regra (ECA Digital), Cristais <b>não</b> podem comprar chaves, baús, gemas nem nada aleatório. Por isso um pacote só pode ter: essências, ingressos, ração e horas de ouro.</div>
+        <div class="grid">
+          <div><label for="s-name">Nome</label><input type="text" id="s-name" maxlength="30" placeholder="Pacote do Ferreiro"></div>
+          <div><label for="s-icon">Ícone (emoji)</label><input type="text" id="s-icon" maxlength="4" placeholder="🔨"></div>
+          <div><label for="s-price">Preço em 💠</label><input type="number" id="s-price" min="1" max="100000" step="1" value="100"></div>
+        </div>
+        <label for="s-descr">Descrição (opcional)</label>
+        <input type="text" id="s-descr" maxlength="120" placeholder="Tudo para forjar suas peças">
+        <div class="grid">
+          <div><label for="s-ess">🔥 Essências</label><input type="number" id="s-ess" min="0" max="5000" step="1" value="0"></div>
+          <div><label for="s-tix">🎟️ Ingressos</label><input type="number" id="s-tix" min="0" max="50" step="1" value="0"></div>
+          <div><label for="s-pet">🍖 Ração</label><input type="number" id="s-pet" min="0" max="5000" step="1" value="0"></div>
+          <div><label for="s-gh">🪙 Horas de ouro</label><input type="number" id="s-gh" min="0" max="48" step="1" value="0"></div>
+        </div>
+        <div class="check"><input type="checkbox" id="s-once" checked><label for="s-once" style="margin:0;color:inherit;font-size:14px;">Só 1 compra por conta</label></div>
+        <div class="check"><input type="checkbox" id="s-active" checked><label for="s-active" style="margin:0;color:inherit;font-size:14px;">Ativo (visível na loja)</label></div>
+        <div class="actions">
+          <button class="btn" id="s-save">Salvar pacote</button>
+          <button class="btn ghost" id="s-new">Limpar / novo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESENTES -->
+    <div id="tab-gift" class="hidden">
+      <div class="card">
+        <h2>Enviar presente</h2>
+        <p class="note">Chega no jogo da pessoa na próxima vez que ela abrir (ou em até 1 minuto, se estiver jogando).</p>
+        <label for="g-name">Nome do jogador</label>
+        <input type="text" id="g-name" list="dl-players" maxlength="16" placeholder="Digite parte do nome…" autocomplete="off">
+        <datalist id="dl-players"></datalist>
+        <div class="check"><input type="checkbox" id="g-all"><label for="g-all" style="margin:0;color:inherit;font-size:14px;">Enviar para <b>TODOS</b> os jogadores (evento)</label></div>
+        <div class="grid" style="margin-top:6px;">
+          <div><label for="g-gold">🪙 Ouro</label><input type="number" id="g-gold" min="0" step="1" value="0"></div>
+          <div><label for="g-ess">🔥 Essências</label><input type="number" id="g-ess" min="0" max="50000" step="1" value="0"></div>
+          <div><label for="g-keys">🔑 Chaves</label><input type="number" id="g-keys" min="0" max="1000" step="1" value="0"></div>
+          <div><label for="g-gems">💎 Gemas</label><input type="number" id="g-gems" min="0" max="100000" step="1" value="0"></div>
+          <div><label for="g-tix">🎟️ Ingressos</label><input type="number" id="g-tix" min="0" max="50" step="1" value="0"></div>
+          <div><label for="g-pet">🍖 Ração</label><input type="number" id="g-pet" min="0" max="5000" step="1" value="0"></div>
+          <div><label for="g-gh">🪙 Horas de ouro</label><input type="number" id="g-gh" min="0" max="48" step="1" value="0"></div>
+          <div><label for="g-cry">💠 Cristais</label><input type="number" id="g-cry" min="0" max="100000" step="1" value="0"></div>
+        </div>
+        <div class="grid">
+          <div><label for="g-gear">⚔️ Equipamento especial</label><select id="g-gear"><option value="">— nenhum —</option></select></div>
+          <div><label for="g-rar">Raridade da peça</label>
+            <select id="g-rar"><option value="common">Comum</option><option value="uncommon">Incomum</option><option value="rare">Raro</option><option value="epic" selected>Épico</option><option value="legendary">Lendário</option><option value="mythic">Mítico</option></select></div>
+        </div>
+        <label for="g-msg">Mensagem (opcional, aparece para o jogador)</label>
+        <input type="text" id="g-msg" maxlength="60" placeholder="Prêmio do evento de domingo!">
+        <div class="note" style="margin-top:8px;">Para todos: Cristais ficam limitados a 1.000 por jogador. Equipamentos só podem ser de peças já criadas na aba Equipamentos.</div>
+        <div class="actions"><button class="btn" id="g-send">🎁 Enviar presente</button></div>
+      </div>
+    </div>
+
+    <!-- EQUIPAMENTOS -->
+    <div id="tab-gear" class="hidden">
+      <div class="card">
+        <h2>Equipamentos criados por você</h2>
+        <p class="note">Entram nos baús junto com as peças do jogo. Desativar faz a peça parar de cair, mas quem já tem continua com ela.</p>
+        <div id="gear-list"></div>
+      </div>
+      <div class="card">
+        <h2 id="gear-form-title">Novo equipamento</h2>
+        <div class="grid">
+          <div><label for="i-name">Nome</label><input type="text" id="i-name" maxlength="24" placeholder="Espada do Dragão"></div>
+          <div><label for="i-slot">Espaço</label><select id="i-slot"></select></div>
+          <div id="i-art-wrap"><label for="i-art">Aparência (só arma)</label>
+            <select id="i-art"><option value="sword">Espada</option><option value="axe">Machado</option><option value="spear">Lança</option><option value="staff">Cajado</option></select></div>
+        </div>
+        <div class="grid">
+          <div><label for="i-a">Ataque × (1 = normal)</label><input type="number" id="i-a" min="0.3" max="1.6" step="0.05" value="1"></div>
+          <div><label for="i-h">Vida × (1 = normal)</label><input type="number" id="i-h" min="0.3" max="1.6" step="0.05" value="1"></div>
+          <div><label for="i-min">Só cai a partir de</label>
+            <select id="i-min"><option value="common">Comum</option><option value="uncommon">Incomum</option><option value="rare">Raro</option><option value="epic">Épico</option><option value="legendary">Lendário</option><option value="mythic">Mítico</option></select></div>
+          <div><label for="i-w">Chance de queda (1 = normal)</label><input type="number" id="i-w" min="0.05" max="5" step="0.05" value="1"></div>
+        </div>
+        <div class="grid">
+          <div><label for="i-trait">Bônus</label>
+            <select id="i-trait"><option value="">— nenhum —</option><option value="crit">🎯 Crítico</option><option value="aspd">⚡ Vel. de ataque</option><option value="ls">🩸 Roubo de vida</option><option value="skill">✨ Dano de habilidade</option><option value="gold">🪙 Ouro</option><option value="xp">📖 Experiência</option><option value="defp">🛡️ Defesa</option></select></div>
+          <div><label for="i-tb">Valor base do bônus</label><input type="number" id="i-tb" min="0" max="10" step="0.5" value="2"></div>
+        </div>
+        <div class="note" id="i-preview" style="margin-top:8px;"></div>
+        <div class="warn">Dica: 1,00 é igual às peças do jogo. Valores acima de 1,20 ficam bem fortes — combine com "só cai a partir de Épico" e chance de queda baixa (0,2 a 0,5). O jogo já limita o total de cada bônus somando todas as peças.</div>
+        <div class="check"><input type="checkbox" id="i-active" checked><label for="i-active" style="margin:0;color:inherit;font-size:14px;">Ativo (pode cair nos baús)</label></div>
+        <div class="actions">
+          <button class="btn" id="i-save">Salvar equipamento</button>
+          <button class="btn ghost" id="i-new">Limpar / novo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div id="tab-log" class="hidden">
+      <div class="card">
+        <h2>Últimas ações</h2>
+        <p class="note">Tudo o que o painel faz fica registrado.</p>
+        <div id="log-list"></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var C = window.GAME_CONFIG || {};
+  var BASE = String(C.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = C.SUPABASE_ANON_KEY || '';
+  var SESSION_KEY = 'guardioes_session_v1';
+
+  var SLOTS = { weapon: 'Arma', armor: 'Armadura', gloves: 'Luvas', ring: 'Anel', helmet: 'Elmo', amulet: 'Amuleto', boots: 'Botas', shield: 'Escudo', cape: 'Capa', belt: 'Cinto', legs: 'Grevas', relic: 'Relíquia' };
+  var TRAITS = { crit: '🎯 Crítico', aspd: '⚡ Vel. de ataque', ls: '🩸 Roubo de vida', skill: '✨ Dano de habilidade', gold: '🪙 Ouro', xp: '📖 Experiência', defp: '🛡️ Defesa' };
+  var RAR = { common: ['Comum', 1], uncommon: ['Incomum', 1.35], rare: ['Raro', 1.85], epic: ['Épico', 2.5], legendary: ['Lendário', 3.45], mythic: ['Mítico', 4.8] };
+  var ERR = {
+    forbidden: 'Sem permissão: esta conta não é administradora.', invalid_id: 'Nome inválido para gerar o código do item.', invalid_name: 'Nome inválido (use até 24–30 letras, sem < > & ").',
+    invalid_descr: 'Descrição inválida (até 120 letras, sem < > & ").', invalid_icon: 'Ícone inválido (use 1 emoji).', invalid_price: 'Preço inválido (1 a 100.000).',
+    empty_payload: 'Coloque pelo menos uma recompensa (e, na loja, só essências, ingressos, ração ou horas de ouro).', not_bundle: 'Esse código já pertence a um item fixo da loja.',
+    invalid_slot: 'Espaço inválido.', invalid_mult: 'Ataque × e Vida × devem ficar entre 0,3 e 1,6.', invalid_trait: 'Bônus inválido.', invalid_trait_base: 'Valor base do bônus: de 0,5 a 10.',
+    invalid_rarity: 'Raridade inválida.', invalid_weight: 'Chance de queda: de 0,05 a 5.', no_player: 'Jogador não encontrado (confira o nome exato).',
+    unknown_item: 'Equipamento não encontrado. Crie e salve primeiro na aba Equipamentos.', invalid_msg: 'Mensagem inválida (até 60 letras, sem < > & ").'
+  };
+
+  /* ---------- sessão (a mesma do jogo) ---------- */
+  var session = null;
+  function loadSession() { try { var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); if (s && s.access_token && s.refresh_token) return s; } catch (e) {} return null; }
+  function storeSession(s) { session = s; try { if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s)); else localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+  async function raw(path, body, token) {
+    var headers = { apikey: KEY, 'Content-Type': 'application/json' };
+    var bearer = token || (KEY.indexOf('sb_') === 0 ? '' : KEY);
+    if (bearer) headers.Authorization = 'Bearer ' + bearer;
+    try {
+      var res = await fetch(BASE + path, { method: 'POST', headers: headers, body: JSON.stringify(body || {}) });
+      var data = null; try { data = await res.json(); } catch (e) {}
+      return { ok: res.ok, status: res.status, data: data };
+    } catch (e) { return { ok: false, status: 0, data: null }; }
+  }
+  async function getToken() {
+    if (!session) return null;
+    if (session.expires_at - Date.now() > 60000) return session.access_token;
+    var r = await raw('/auth/v1/token?grant_type=refresh_token', { refresh_token: session.refresh_token });
+    if (r.ok && r.data && r.data.access_token) {
+      storeSession({ access_token: r.data.access_token, refresh_token: r.data.refresh_token || session.refresh_token, expires_at: Date.now() + (Number(r.data.expires_in) || 3600) * 1000, user: r.data.user || session.user });
+      return session.access_token;
+    }
+    return session.expires_at > Date.now() ? session.access_token : null;
+  }
+  async function rpc(name, args) {
+    var t = await getToken();
+    if (!t) return { ok: false, status: 401, data: null };
+    return raw('/rest/v1/rpc/' + name, args, t);
+  }
+  /* chama uma função admin e mostra o erro em português; devolve os dados ou null */
+  async function call(name, args) {
+    var r = await rpc(name, args);
+    if (!r.ok) { toast(r.status === 0 ? 'Sem conexão com o servidor.' : r.status === 404 ? 'O servidor ainda não tem o painel: rode o arquivo admin.sql no Supabase.' : 'Erro do servidor (' + r.status + ').', true); return null; }
+    var d = r.data;
+    if (d && d.ok === false) { toast(ERR[d.error] || ('Erro: ' + d.error), true); return null; }
+    return d;
+  }
+
+  var tt = 0;
+  function toast(msg, bad) { var t = $('toast'); t.textContent = msg; t.className = bad ? 'err' : ''; clearTimeout(tt); tt = setTimeout(function () { t.className = 'hidden'; }, bad ? 6500 : 3200); }
+  var slug = function (s, max) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, max); };
+  var fmt = function (n) { return Number(n || 0).toLocaleString('pt-BR'); };
+  var intv = function (id) { return Math.max(0, Math.floor(Number($(id).value) || 0)); };
+
+  /* ---------- portão ---------- */
+  function gate(title, text, actions) {
+    $('gate').classList.remove('hidden'); $('app').classList.add('hidden');
+    $('gate-title').textContent = title; $('gate-text').innerHTML = text; $('gate-actions').innerHTML = actions || '';
+  }
+  async function start() {
+    if (!BASE || !KEY) { gate('Online não configurado', 'O arquivo <b>config.js</b> ainda está sem o endereço e a chave do Supabase.', ''); return; }
+    session = loadSession();
+    if (!session) {
+      gate('Entre no jogo primeiro', 'Abra o jogo <b>neste mesmo navegador</b>, entre com o seu e-mail (aba Herói → Conta) e volte aqui.',
+        '<a class="btn" href="./">Abrir o jogo</a><button class="btn ghost" id="again">Já entrei, verificar de novo</button>');
+      $('again').onclick = start; return;
+    }
+    gate('Verificando permissão…', '', '');
+    var r = await rpc('admin_whoami', {});
+    if (r.status === 404) { gate('Falta instalar o painel no servidor', 'Rode o arquivo <b>supabase/admin.sql</b> no Supabase (SQL Editor → New query → Run) e atualize esta página.', '<button class="btn" id="again">Atualizar</button>'); $('again').onclick = start; return; }
+    if (!r.ok) { gate('Não consegui entrar', 'Sua sessão expirou ou o servidor não respondeu. Abra o jogo, entre de novo e volte aqui.', '<a class="btn" href="./">Abrir o jogo</a><button class="btn ghost" id="again">Tentar de novo</button>'); $('again').onclick = start; return; }
+    if (!r.data || !r.data.admin) {
+      var em = session.user && session.user.email ? esc(session.user.email) : 'o e-mail de login';
+      gate('Esta conta não é de administrador', 'Você está logado como <b>' + em + '</b>. No Supabase, abra o SQL Editor, coloque esse e-mail na última linha do <b>admin.sql</b> (no lugar de SEU_EMAIL_AQUI) e rode de novo.', '<button class="btn" id="again">Verificar de novo</button>');
+      $('again').onclick = start; return;
+    }
+    $('who').textContent = 'Admin: ' + ((session.user && session.user.email) || '');
+    $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
+    await Promise.all([loadShop(), loadGear()]);
+  }
+
+  /* ---------- abas ---------- */
+  var tabs = ['shop', 'gift', 'gear', 'log'];
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab'); if (!b) return;
+    var t = b.getAttribute('data-tab');
+    tabs.forEach(function (x) { $('tab-' + x).classList.toggle('hidden', x !== t); });
+    document.querySelectorAll('#tabs .tab').forEach(function (x) { x.classList.toggle('on', x === b); });
+    if (t === 'log') loadLog();
+    if (t === 'gift') fillGearSelect();
+  });
+
+  /* ---------- LOJA ---------- */
+  var shop = [], editingShop = null;
+  function contents(p) {
+    return [p.essences ? fmt(p.essences) + ' 🔥' : '', p.tickets ? p.tickets + ' 🎟️' : '', p.petFood ? fmt(p.petFood) + ' 🍖' : '', p.goldHours ? p.goldHours + 'h de ouro' : ''].filter(Boolean).join(' • ');
+  }
+  async function loadShop() {
+    var d = await call('admin_list_shop', {}); if (!d) return;
+    shop = d.items || [];
+    $('shop-list').innerHTML = shop.length ? shop.map(function (it, i) {
+      return '<div class="row"><div class="main"><div class="t">' + esc(it.icon || '🎁') + ' ' + esc(it.name) + ' — ' + fmt(it.price) + ' 💠' + (it.active ? '<span class="chip">ativo</span>' : '<span class="chip off">desativado</span>') + '</div>' +
+        '<div class="s">' + esc(contents(it.payload || {})) + (it.one_time ? ' · 1 por conta' : ' · pode comprar várias vezes') + (it.descr ? ' · ' + esc(it.descr) : '') + '</div></div>' +
+        '<div class="acts"><button class="btn small ghost" data-edit="' + i + '">Editar</button><button class="btn small ' + (it.active ? 'red' : '') + '" data-toggle="' + i + '">' + (it.active ? 'Desativar' : 'Ativar') + '</button></div></div>';
+    }).join('') : '<p class="note">Nenhum pacote ainda.</p>';
+  }
+  function shopArgs(it, over) {
+    var o = Object.assign({}, it, over || {});
+    return { p_id: o.id, p_name: o.name, p_descr: o.descr || '', p_icon: o.icon || '', p_price: o.price, p_payload: o.payload || {}, p_one_time: !!o.one_time, p_active: !!o.active, p_sort: o.sort || 100 };
+  }
+  function shopReset() {
+    editingShop = null; $('shop-form-title').textContent = 'Novo pacote';
+    ['s-name', 's-icon', 's-descr'].forEach(function (id) { $(id).value = ''; });
+    $('s-price').value = 100; ['s-ess', 's-tix', 's-pet', 's-gh'].forEach(function (id) { $(id).value = 0; });
+    $('s-once').checked = true; $('s-active').checked = true;
+  }
+  $('s-new').onclick = shopReset;
+  $('shop-list').addEventListener('click', async function (e) {
+    var ed = e.target.closest('[data-edit]'), tg = e.target.closest('[data-toggle]');
+    if (ed) {
+      var it = shop[Number(ed.getAttribute('data-edit'))], p = it.payload || {};
+      editingShop = it.id; $('shop-form-title').textContent = 'Editando: ' + it.name;
+      $('s-name').value = it.name || ''; $('s-icon').value = it.icon || ''; $('s-descr').value = it.descr || ''; $('s-price').value = it.price;
+      $('s-ess').value = p.essences || 0; $('s-tix').value = p.tickets || 0; $('s-pet').value = p.petFood || 0; $('s-gh').value = p.goldHours || 0;
+      $('s-once').checked = !!it.one_time; $('s-active').checked = !!it.active;
+      $('s-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (tg) {
+      var it2 = shop[Number(tg.getAttribute('data-toggle'))];
+      if (await call('admin_save_shop_item', shopArgs(it2, { active: !it2.active }))) { toast(it2.active ? 'Pacote desativado.' : 'Pacote ativado.'); loadShop(); }
+    }
+  });
+  $('s-save').onclick = async function () {
+    var name = $('s-name').value.trim();
+    if (!name) { toast('Escreva o nome do pacote.', true); return; }
+    var id = editingShop;
+    if (!id) {
+      var base = 'pk_' + (slug(name, 22) || 'novo'); id = base; var n = 2;
+      while (shop.some(function (x) { return x.id === id; })) { id = base + '_' + n++; }
+    }
+    var payload = {};
+    [['essences', 's-ess'], ['tickets', 's-tix'], ['petFood', 's-pet'], ['goldHours', 's-gh']].forEach(function (k) { var v = intv(k[1]); if (v > 0) payload[k[0]] = v; });
+    var old = shop.find(function (x) { return x.id === id; }) || {};
+    var d = await call('admin_save_shop_item', { p_id: id, p_name: name, p_descr: $('s-descr').value.trim(), p_icon: $('s-icon').value.trim(), p_price: intv('s-price'), p_payload: payload, p_one_time: $('s-once').checked, p_active: $('s-active').checked, p_sort: old.sort || 100 });
+    if (d) { toast('Pacote salvo! Já aparece na loja do jogo.'); shopReset(); loadShop(); }
+  };
+
+  /* ---------- EQUIPAMENTOS ---------- */
+  var gear = [], editingGear = null;
+  $('i-slot').innerHTML = Object.keys(SLOTS).map(function (k) { return '<option value="' + k + '">' + SLOTS[k] + '</option>'; }).join('');
+  function gearPreview() {
+    var tr = $('i-trait').value, b = Number($('i-tb').value) || 0;
+    $('i-art-wrap').classList.toggle('hidden', $('i-slot').value !== 'weapon');
+    if (!tr || b <= 0) { $('i-preview').textContent = 'Sem bônus especial. (Peças Comuns nunca têm bônus.)'; return; }
+    $('i-preview').textContent = 'Bônus final por raridade: ' + Object.keys(RAR).slice(1).map(function (k) { return RAR[k][0] + ' +' + Math.max(1, Math.round(b * RAR[k][1])) + '%'; }).join(' · ');
+  }
+  ['i-slot', 'i-trait', 'i-tb'].forEach(function (id) { $(id).addEventListener('input', gearPreview); });
+  function gearReset() {
+    editingGear = null; $('gear-form-title').textContent = 'Novo equipamento';
+    $('i-name').value = ''; $('i-slot').value = 'weapon'; $('i-art').value = 'sword'; $('i-a').value = 1; $('i-h').value = 1; $('i-min').value = 'common'; $('i-w').value = 1;
+    $('i-trait').value = ''; $('i-tb').value = 2; $('i-active').checked = true; gearPreview();
+  }
+  $('i-new').onclick = gearReset;
+  function fillGearSelect() {
+    var cur = $('g-gear').value;
+    $('g-gear').innerHTML = '<option value="">— nenhum —</option>' + gear.filter(function (g) { return g.active; }).map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + ' (' + esc(SLOTS[g.slot] || g.slot) + ')</option>'; }).join('');
+    $('g-gear').value = cur;
+  }
+  async function loadGear() {
+    var r = await rpc('get_custom_items', {});
+    if (!r.ok || !Array.isArray(r.data)) { toast('Não consegui carregar os equipamentos (rode o admin.sql).', true); return; }
+    gear = r.data;
+    $('gear-list').innerHTML = gear.length ? gear.map(function (g, i) {
+      return '<div class="row"><div class="main"><div class="t">' + esc(g.name) + ' <span class="s">(' + esc(SLOTS[g.slot] || g.slot) + ')</span>' + (g.active ? '<span class="chip">ativo</span>' : '<span class="chip off">desativado</span>') + '</div>' +
+        '<div class="s">Ataque ×' + Number(g.a).toFixed(2) + ' · Vida ×' + Number(g.h).toFixed(2) + (g.trait ? ' · ' + esc(TRAITS[g.trait] || g.trait) + ' base ' + g.tb : ' · sem bônus') +
+        ' · a partir de ' + esc((RAR[g.minR] || ['?'])[0]) + ' · chance ' + Number(g.w).toFixed(2) + '</div></div>' +
+        '<div class="acts"><button class="btn small ghost" data-edit="' + i + '">Editar</button><button class="btn small ' + (g.active ? 'red' : '') + '" data-toggle="' + i + '">' + (g.active ? 'Desativar' : 'Ativar') + '</button></div></div>';
+    }).join('') : '<p class="note">Nenhum equipamento criado ainda.</p>';
+    fillGearSelect();
+  }
+  function gearArgs(g, over) {
+    var o = Object.assign({}, g, over || {});
+    return { p_id: o.id, p_slot: o.slot, p_name: o.name, p_a: Number(o.a), p_h: Number(o.h), p_trait: o.trait || '', p_trait_base: Number(o.tb) || 0, p_art: o.art || '', p_min_rarity: o.minR || 'common', p_weight: Number(o.w), p_active: !!o.active };
+  }
+  $('gear-list').addEventListener('click', async function (e) {
+    var ed = e.target.closest('[data-edit]'), tg = e.target.closest('[data-toggle]');
+    if (ed) {
+      var g = gear[Number(ed.getAttribute('data-edit'))];
+      editingGear = g.id; $('gear-form-title').textContent = 'Editando: ' + g.name;
+      $('i-name').value = g.name; $('i-slot').value = g.slot; $('i-art').value = g.art || 'sword'; $('i-a').value = g.a; $('i-h').value = g.h; $('i-min').value = g.minR || 'common';
+      $('i-w').value = g.w; $('i-trait').value = g.trait || ''; $('i-tb').value = g.tb || 2; $('i-active').checked = !!g.active; gearPreview();
+      $('i-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (tg) {
+      var g2 = gear[Number(tg.getAttribute('data-toggle'))];
+      if (await call('admin_save_custom_item', gearArgs(g2, { active: !g2.active }))) { toast(g2.active ? 'Equipamento desativado.' : 'Equipamento ativado.'); loadGear(); }
+    }
+  });
+  $('i-save').onclick = async function () {
+    var name = $('i-name').value.trim();
+    if (!name) { toast('Escreva o nome do equipamento.', true); return; }
+    var id = editingGear;
+    if (!id) {
+      var base = 'c_' + (slug(name, 24) || 'peca'); id = base; var n = 2;
+      while (gear.some(function (x) { return x.id === id; })) { id = base + '_' + n++; }
+    }
+    var tr = $('i-trait').value, slot = $('i-slot').value;
+    var d = await call('admin_save_custom_item', {
+      p_id: id, p_slot: slot, p_name: name, p_a: Number($('i-a').value) || 1, p_h: Number($('i-h').value) || 1, p_trait: tr, p_trait_base: tr ? (Number($('i-tb').value) || 0) : 0,
+      p_art: slot === 'weapon' ? $('i-art').value : '', p_min_rarity: $('i-min').value, p_weight: Number($('i-w').value) || 1, p_active: $('i-active').checked
+    });
+    if (d) { toast('Equipamento salvo! Os jogadores recebem a peça nova ao abrir o jogo.'); gearReset(); loadGear(); }
+  };
+
+  /* ---------- PRESENTES ---------- */
+  var st = 0;
+  $('g-name').addEventListener('input', function () {
+    clearTimeout(st); var q = $('g-name').value.trim(); if (!q) return;
+    st = setTimeout(async function () {
+      var r = await rpc('admin_search_players', { p_q: q });
+      if (r.ok && r.data && r.data.players) $('dl-players').innerHTML = r.data.players.map(function (p) { return '<option value="' + esc(p.name) + '">Nv. ' + esc(p.level) + ' · fase ' + esc(p.best_idx) + '</option>'; }).join('');
+    }, 250);
+  });
+  $('g-all').addEventListener('change', function () { $('g-name').disabled = $('g-all').checked; });
+  $('g-send').onclick = async function () {
+    var all = $('g-all').checked, who = $('g-name').value.trim();
+    if (!all && !who) { toast('Digite o nome do jogador (ou marque "todos").', true); return; }
+    var payload = {}, parts = [];
+    [['gold', 'g-gold', '🪙 ouro'], ['essences', 'g-ess', '🔥 essências'], ['keys', 'g-keys', '🔑 chaves'], ['gems', 'g-gems', '💎 gemas'], ['tickets', 'g-tix', '🎟️ ingressos'],
+     ['petFood', 'g-pet', '🍖 ração'], ['goldHours', 'g-gh', 'h de ouro'], ['crystals', 'g-cry', '💠 cristais']].forEach(function (k) {
+      var v = intv(k[1]); if (v > 0) { payload[k[0]] = v; parts.push(fmt(v) + ' ' + k[2]); }
+    });
+    var gid = $('g-gear').value;
+    if (gid) { payload.gear = { id: gid, rarity: $('g-rar').value }; var g = gear.find(function (x) { return x.id === gid; }); parts.push('1 ' + (g ? g.name : gid) + ' (' + RAR[$('g-rar').value][0] + ')'); }
+    if (!parts.length) { toast('Escolha pelo menos uma recompensa.', true); return; }
+    if (!confirm('Enviar para ' + (all ? 'TODOS os jogadores' : '"' + who + '"') + ':\n\n' + parts.join('\n') + '\n\nNão dá para desfazer. Confirmar?')) return;
+    $('g-send').disabled = true;
+    var d = await call('admin_gift', { p_target: all ? '*' : who, p_payload: payload, p_msg: $('g-msg').value.trim() });
+    $('g-send').disabled = false;
+    if (d) {
+      toast('Presente enviado para ' + d.count + (d.count === 1 ? ' jogador!' : ' jogadores!'));
+      ['g-gold', 'g-ess', 'g-keys', 'g-gems', 'g-tix', 'g-pet', 'g-gh', 'g-cry'].forEach(function (id) { $(id).value = 0; }); $('g-gear').value = ''; $('g-msg').value = '';
+    }
+  };
+
+  /* ---------- HISTÓRICO ---------- */
+  var ACT = { shop_save: '🛒 Pacote salvo', item_save: '⚔️ Equipamento salvo', gift: '🎁 Presente enviado' };
+  async function loadLog() {
+    var d = await call('admin_recent_log', {}); if (!d) return;
+    $('log-list').innerHTML = (d.log || []).length ? d.log.map(function (l) {
+      return '<div class="row"><div class="main"><div class="t">' + esc(ACT[l.action] || l.action) + '</div><div class="s">' + esc(new Date(l.at).toLocaleString('pt-BR')) + '</div><div class="log">' + esc(JSON.stringify(l.detail || {})) + '</div></div></div>';
+    }).join('') : '<p class="note">Nada registrado ainda.</p>';
+  }
+
+  gearReset(); shopReset();
+  start();
+})();
+</script>
+</body>
+</html>
