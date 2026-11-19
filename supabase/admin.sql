@@ -311,5 +311,5 @@ to authenticated;
 --    (você precisa já ter entrado no jogo uma vez com esse e-mail)
 -- ---------------------------------------------------------------------
 insert into public.admins (user_id)
-  select id from auth.users where lower(email) = lower('SEU_EMAIL_AQUI')
+  select id from auth.users where lower(email) = lower('ferreirazaita2@gmail.com')
 on conflict do nothing;
