@@ -270,7 +270,7 @@
     if (!r.ok) { gate('Não consegui entrar', 'Sua sessão expirou ou o servidor não respondeu. Abra o jogo, entre de novo e volte aqui.', '<a class="btn" href="./">Abrir o jogo</a><button class="btn ghost" id="again">Tentar de novo</button>'); $('again').onclick = start; return; }
     if (!r.data || !r.data.admin) {
       var em = session.user && session.user.email ? esc(session.user.email) : 'o e-mail de login';
-      gate('Esta conta não é de administrador', 'Você está logado como <b>' + em + '</b>. No Supabase, abra o SQL Editor, coloque esse e-mail na última linha do <b>admin.sql</b> (no lugar de SEU_EMAIL_AQUI) e rode de novo.', '<button class="btn" id="again">Verificar de novo</button>');
+      gate('Esta conta não é de administrador', 'Você está logado como <b>' + em + '</b>. No Supabase, abra o SQL Editor, coloque esse e-mail na última linha do <b>admin.sql</b> (no lugar de ferreirazaita2@gmail.com) e rode de novo.', '<button class="btn" id="again">Verificar de novo</button>');
       $('again').onclick = start; return;
     }
     $('who').textContent = 'Admin: ' + ((session.user && session.user.email) || '');
