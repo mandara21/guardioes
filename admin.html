@@ -109,10 +109,11 @@
     <div id="tab-gift" class="hidden">
       <div class="card">
         <h2>Enviar presente</h2>
-        <p class="note">Chega no jogo da pessoa na próxima vez que ela abrir (ou em até 1 minuto, se estiver jogando).</p>
-        <label for="g-name">Nome do jogador</label>
-        <input type="text" id="g-name" list="dl-players" maxlength="16" placeholder="Digite parte do nome…" autocomplete="off">
+        <p class="note">O presente vai para a <b>Caixa de mensagens</b> do jogador, e ele resgata quando quiser. Aparece em até 1 minuto se ele estiver jogando, ou ao abrir o jogo.</p>
+        <label for="g-name">ID do jogador (8 números) ou nome</label>
+        <input type="text" id="g-name" list="dl-players" maxlength="16" placeholder="Ex.: 48213907 — ou parte do nome" autocomplete="off" inputmode="text">
         <datalist id="dl-players"></datalist>
+        <div class="note" id="g-who" style="margin-top:6px;min-height:18px;"></div>
         <div class="check"><input type="checkbox" id="g-all"><label for="g-all" style="margin:0;color:inherit;font-size:14px;">Enviar para <b>TODOS</b> os jogadores (evento)</label></div>
         <div class="grid" style="margin-top:6px;">
           <div><label for="g-gold">🪙 Ouro</label><input type="number" id="g-gold" min="0" step="1" value="0"></div>
@@ -131,7 +132,7 @@
         </div>
         <label for="g-msg">Mensagem (opcional, aparece para o jogador)</label>
         <input type="text" id="g-msg" maxlength="60" placeholder="Prêmio do evento de domingo!">
-        <div class="note" style="margin-top:8px;">Para todos: Cristais ficam limitados a 1.000 por jogador. Equipamentos só podem ser de peças já criadas na aba Equipamentos.</div>
+        <div class="note" style="margin-top:8px;">Para todos: Cristais ficam limitados a 1.000 por jogador. Os Cristais só entram na carteira quando o jogador resgata. Equipamentos só podem ser de peças já criadas na aba Equipamentos.</div>
         <div class="actions"><button class="btn" id="g-send">🎁 Enviar presente</button></div>
       </div>
     </div>
@@ -203,7 +204,7 @@
     invalid_descr: 'Descrição inválida (até 120 letras, sem < > & ").', invalid_icon: 'Ícone inválido (use 1 emoji).', invalid_price: 'Preço inválido (1 a 100.000).',
     empty_payload: 'Coloque pelo menos uma recompensa (e, na loja, só essências, ingressos, ração ou horas de ouro).', not_bundle: 'Esse código já pertence a um item fixo da loja.',
     invalid_slot: 'Espaço inválido.', invalid_mult: 'Ataque × e Vida × devem ficar entre 0,3 e 1,6.', invalid_trait: 'Bônus inválido.', invalid_trait_base: 'Valor base do bônus: de 0,5 a 10.',
-    invalid_rarity: 'Raridade inválida.', invalid_weight: 'Chance de queda: de 0,05 a 5.', no_player: 'Jogador não encontrado (confira o nome exato).',
+    invalid_rarity: 'Raridade inválida.', invalid_weight: 'Chance de queda: de 0,05 a 5.', no_player: 'Jogador não encontrado (confira o ID ou o nome exato).',
     unknown_item: 'Equipamento não encontrado. Crie e salve primeiro na aba Equipamentos.', invalid_msg: 'Mensagem inválida (até 60 letras, sem < > & ").'
   };
 
@@ -270,7 +271,7 @@
     if (!r.ok) { gate('Não consegui entrar', 'Sua sessão expirou ou o servidor não respondeu. Abra o jogo, entre de novo e volte aqui.', '<a class="btn" href="./">Abrir o jogo</a><button class="btn ghost" id="again">Tentar de novo</button>'); $('again').onclick = start; return; }
     if (!r.data || !r.data.admin) {
       var em = session.user && session.user.email ? esc(session.user.email) : 'o e-mail de login';
-      gate('Esta conta não é de administrador', 'Você está logado como <b>' + em + '</b>. No Supabase, abra o SQL Editor, coloque esse e-mail na última linha do <b>admin.sql</b> (no lugar de ferreirazaita2@gmail.com) e rode de novo.', '<button class="btn" id="again">Verificar de novo</button>');
+      gate('Esta conta não é de administrador', 'Você está logado como <b>' + em + '</b>. No Supabase, abra o SQL Editor, coloque esse e-mail na última linha do <b>admin.sql</b> (no lugar de SEU_EMAIL_AQUI) e rode de novo.', '<button class="btn" id="again">Verificar de novo</button>');
       $('again').onclick = start; return;
     }
     $('who').textContent = 'Admin: ' + ((session.user && session.user.email) || '');
@@ -410,18 +411,28 @@
   };
 
   /* ---------- PRESENTES ---------- */
-  var st = 0;
+  var st = 0, who = null;   // who = jogador confirmado na busca {name, public_id}
+  function whoShow(p, msg) {
+    who = p || null;
+    $('g-who').innerHTML = p ? '✅ <b>' + esc(p.name) + '</b> · ID ' + esc(p.public_id) + ' · Nv. ' + esc(p.level) + (p.banned ? ' · <b>BANIDO</b>' : '') : esc(msg || '');
+  }
   $('g-name').addEventListener('input', function () {
-    clearTimeout(st); var q = $('g-name').value.trim(); if (!q) return;
+    clearTimeout(st); var q = $('g-name').value.trim().replace(/^#/, ''); who = null; $('g-who').textContent = ''; if (!q) return;
     st = setTimeout(async function () {
       var r = await rpc('admin_search_players', { p_q: q });
-      if (r.ok && r.data && r.data.players) $('dl-players').innerHTML = r.data.players.map(function (p) { return '<option value="' + esc(p.name) + '">Nv. ' + esc(p.level) + ' · fase ' + esc(p.best_idx) + '</option>'; }).join('');
+      var list = (r.ok && r.data && r.data.players) || [];
+      $('dl-players').innerHTML = list.map(function (p) { return '<option value="' + esc(p.public_id || p.name) + '">' + esc(p.name) + ' · Nv. ' + esc(p.level) + ' · fase ' + esc(p.best_idx) + '</option>'; }).join('');
+      var exact = list.filter(function (p) { return String(p.public_id) === q || p.name.toLowerCase() === q.toLowerCase(); });
+      if (exact.length === 1) whoShow(exact[0]);
+      else if (/^[0-9]{8}$/.test(q)) whoShow(null, 'Nenhum jogador com esse ID.');
+      else if (list.length > 1) whoShow(null, list.length + ' jogadores parecidos: escolha um da lista (ou digite o ID).');
+      else whoShow(null, 'Nenhum jogador encontrado.');
     }, 250);
   });
-  $('g-all').addEventListener('change', function () { $('g-name').disabled = $('g-all').checked; });
+  $('g-all').addEventListener('change', function () { $('g-name').disabled = $('g-all').checked; if ($('g-all').checked) { who = null; $('g-who').textContent = ''; } });
   $('g-send').onclick = async function () {
-    var all = $('g-all').checked, who = $('g-name').value.trim();
-    if (!all && !who) { toast('Digite o nome do jogador (ou marque "todos").', true); return; }
+    var all = $('g-all').checked, target = $('g-name').value.trim().replace(/^#/, '');
+    if (!all && !target) { toast('Digite o ID ou o nome do jogador (ou marque "todos").', true); return; }
     var payload = {}, parts = [];
     [['gold', 'g-gold', '🪙 ouro'], ['essences', 'g-ess', '🔥 essências'], ['keys', 'g-keys', '🔑 chaves'], ['gems', 'g-gems', '💎 gemas'], ['tickets', 'g-tix', '🎟️ ingressos'],
      ['petFood', 'g-pet', '🍖 ração'], ['goldHours', 'g-gh', 'h de ouro'], ['crystals', 'g-cry', '💠 cristais']].forEach(function (k) {
@@ -430,12 +441,12 @@
     var gid = $('g-gear').value;
     if (gid) { payload.gear = { id: gid, rarity: $('g-rar').value }; var g = gear.find(function (x) { return x.id === gid; }); parts.push('1 ' + (g ? g.name : gid) + ' (' + RAR[$('g-rar').value][0] + ')'); }
     if (!parts.length) { toast('Escolha pelo menos uma recompensa.', true); return; }
-    if (!confirm('Enviar para ' + (all ? 'TODOS os jogadores' : '"' + who + '"') + ':\n\n' + parts.join('\n') + '\n\nNão dá para desfazer. Confirmar?')) return;
+    if (!confirm('Enviar para ' + (all ? 'TODOS os jogadores' : (who ? who.name + ' (ID ' + who.public_id + ')' : '"' + target + '"')) + ':\n\n' + parts.join('\n') + '\n\nNão dá para desfazer. Confirmar?')) return;
     $('g-send').disabled = true;
-    var d = await call('admin_gift', { p_target: all ? '*' : who, p_payload: payload, p_msg: $('g-msg').value.trim() });
+    var d = await call('admin_gift', { p_target: all ? '*' : target, p_payload: payload, p_msg: $('g-msg').value.trim() });
     $('g-send').disabled = false;
     if (d) {
-      toast('Presente enviado para ' + d.count + (d.count === 1 ? ' jogador!' : ' jogadores!'));
+      toast(d.player ? 'Presente enviado para ' + d.player + ' (ID ' + d.public_id + ')! Está na caixa de mensagens dele.' : 'Presente enviado para ' + d.count + (d.count === 1 ? ' jogador!' : ' jogadores!') + ' Está na caixa de mensagens.');
       ['g-gold', 'g-ess', 'g-keys', 'g-gems', 'g-tix', 'g-pet', 'g-gh', 'g-cry'].forEach(function (id) { $(id).value = 0; }); $('g-gear').value = ''; $('g-msg').value = '';
     }
   };
